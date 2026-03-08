@@ -2235,7 +2235,7 @@ class MainWindow(QMainWindow):
         self.history_list.clear()
         import os
         from datetime import datetime
-        sessions_dir = os.path.expanduser("~/moruk-os/data/sessions")
+        sessions_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sessions")
         os.makedirs(sessions_dir, exist_ok=True)
         files = sorted(
             [f for f in os.listdir(sessions_dir) if f.endswith(".json")],
@@ -2344,7 +2344,7 @@ class MainWindow(QMainWindow):
                         content = next((p.get("text","") for p in content if isinstance(p,dict)), "")
                     title = content[:60].strip() or "Chat"
                     break
-            sessions_dir = os.path.expanduser("~/moruk-os/data/sessions")
+            sessions_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sessions")
             os.makedirs(sessions_dir, exist_ok=True)
             ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             path = os.path.join(sessions_dir, f"{ts}.json")

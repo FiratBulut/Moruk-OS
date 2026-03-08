@@ -72,7 +72,7 @@ def _run_agent(agent_def: dict, result_queue: queue.Queue, idx: int, timeout: in
                 out = subprocess.check_output(
                     args, shell=False, timeout=timeout,
                     stderr=subprocess.STDOUT,
-                    cwd=os.path.expanduser("~/moruk-os")
+                    cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 )
                 output = out.decode(errors="replace").strip()[:2000]
                 status = "ok"

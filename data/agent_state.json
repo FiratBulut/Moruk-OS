@@ -1,0 +1,26 @@
+{
+  "identity": "Moruk",
+  "mode": "shutdown",
+  "current_goal": null,
+  "active_task": null,
+  "last_action": null,
+  "last_thought": null,
+  "session_count": 3,
+  "total_interactions": 0,
+  "created_at": "2026-03-08T12:43:39.441547",
+  "last_active": "2026-03-08T12:50:19.076962",
+  "uptime_sessions": [
+    {
+      "started": "2026-03-08T12:43:39.441553",
+      "session_number": 1
+    },
+    {
+      "started": "2026-03-08T12:48:26.456338",
+      "session_number": 2
+    },
+    {
+      "started": "2026-03-08T12:50:19.076967",
+      "session_number": 3
+    }
+  ]
+}

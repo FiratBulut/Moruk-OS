@@ -21,7 +21,7 @@ log = logging.getLogger("voice")
 
 PROJECT_ROOT = Path(__file__).parent.parent
 SETTINGS_PATH = PROJECT_ROOT / "config" / "user_settings.json"
-PIPER_MODEL_PATH = os.path.expanduser('~/moruk-os/models/de_DE-thorsten-high.onnx')
+PIPER_MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models', 'de_DE-thorsten-high.onnx')
 
 _voice_queue = queue.Queue()
 _player_thread = None
@@ -34,7 +34,7 @@ def _load_tts_settings() -> dict:
             settings = json.load(f)
         return {
             "provider": settings.get("tts_provider", "piper").lower(),
-            "api_key":  settings.get("tts_api_key", ""),  # Kein Fallback auf xAI Key!
+            "api_key":  settings.get("tts_api_key", "") or settings.get("api_key", ""),
             "model":    settings.get("tts_model", ""),
             "language": settings.get("tts_language", "de-DE"),
             "voice":    settings.get("tts_voice", ""),

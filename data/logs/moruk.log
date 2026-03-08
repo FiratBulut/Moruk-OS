@@ -1,0 +1,204 @@
+12:43:38 [INFO] moruk: ==================================================
+12:43:38 [INFO] moruk: MORUK OS starting...
+12:43:38 [INFO] moruk: Python: /usr/bin/python3 (3.12)
+12:43:38 [INFO] moruk: venv site-packages: not needed (already in venv)
+12:43:38 [INFO] moruk: ==================================================
+12:43:38 [WARNING] moruk.startup: Startup Warning: Optional missing: anthropic
+12:43:38 [WARNING] moruk.startup: Startup Warning: Kein API Key konfiguriert — click ⚙ to setup
+12:43:38 [INFO] moruk.startup: Startup: ✓ PyQt6
+12:43:38 [INFO] moruk.startup: Startup: ✓ openai
+12:43:38 [INFO] moruk.startup: Startup: DB wird neu erstellt
+12:43:38 [INFO] moruk.startup: Startup: ✓ System Prompt (8956 bytes)
+12:43:38 [INFO] moruk.startup: Startup: ✓ Disk: 599GB frei (29% genutzt)
+12:43:38 [INFO] moruk.startup: Startup: ✓ RAM: 39830MB verfügbar (16% genutzt)
+12:43:38 [INFO] moruk.startup: Startup: ✓ Watchdog: Keine Crashes
+12:43:39 [INFO] moruk: App font set to: Noto Sans
+12:43:39 [INFO] moruk.brain: Brain initialized. Provider: anthropic, configured: False
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'browser' from browser.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'code_analyzer' from code_analyzer.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'file_analyzer' from file_analyzer.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'file_manager' from file_manager.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'gpu_monitor' from gpu_monitor.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'gui' from gui.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'hardware_monitor' from hardware_monitor.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'image_generator' from image_generator.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'list_tools' from list_tools.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'media_control' from media_control.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'ml' from ml.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'multi_agent' from multi_agent.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'notification' from notification.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'password_generator' from password_generator.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'scheduler' from scheduler.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'summarizer' from summarizer.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'system_info' from system_info.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'system_watchdog' from system_watchdog.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'tasks' from tasks.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'translator' from translator.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'tts' from tts.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'type_hinter' from type_hinter.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'video' from video.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'vision' from vision.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'voice' from voice.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'web_monitor' from web_monitor.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'web_scraper' from web_scraper.py
+12:43:39 [INFO] moruk.plugins: Plugin loaded: 'web_search' from web_search.py
+12:43:39 [INFO] moruk.plugins: Loaded 28 plugins: ['browser', 'code_analyzer', 'file_analyzer', 'file_manager', 'gpu_monitor', 'gui', 'hardware_monitor', 'image_generator', 'list_tools', 'media_control', 'ml', 'multi_agent', 'notification', 'password_generator', 'scheduler', 'summarizer', 'system_info', 'system_watchdog', 'tasks', 'translator', 'tts', 'type_hinter', 'video', 'vision', 'voice', 'web_monitor', 'web_scraper', 'web_search']
+12:43:39 [INFO] moruk.monitor_engine: MonitorEngine started (0 monitors)
+12:43:39 [INFO] moruk.ui: MonitorEngine started (0 monitors)
+12:43:39 [INFO] moruk.heartbeat: Heartbeat: registered 'brain'
+12:43:39 [INFO] moruk.heartbeat: Heartbeat: registered 'autonomy_loop'
+12:43:39 [INFO] moruk.heartbeat: Heartbeat: registered 'task_manager'
+12:43:39 [INFO] moruk.heartbeat: Heartbeat started
+12:43:40 [INFO] moruk.ui: System Watchdog gestartet
+12:43:40 [INFO] moruk: MORUK OS UI ready
+12:43:49 [WARNING] moruk.heartbeat: Heartbeat FAIL [brain] (#1): No API client — missing API key or provider not configured
+12:43:49 [WARNING] moruk.ui: Heartbeat failure: [brain] No API client — missing API key or provider not configured
+12:43:49 [WARNING] moruk.ui: Brain failure — reinitializing client...
+12:43:59 [WARNING] moruk.heartbeat: Heartbeat FAIL [brain] (#2): No API client — missing API key or provider not configured
+12:43:59 [WARNING] moruk.ui: Heartbeat failure: [brain] No API client — missing API key or provider not configured
+12:43:59 [WARNING] moruk.ui: Brain failure — reinitializing client...
+12:44:09 [WARNING] moruk.heartbeat: Heartbeat FAIL [brain] (#3): No API client — missing API key or provider not configured
+12:44:09 [WARNING] moruk.ui: Heartbeat failure: [brain] No API client — missing API key or provider not configured
+12:44:09 [WARNING] moruk.ui: Brain failure — reinitializing client...
+12:44:19 [WARNING] moruk.heartbeat: Heartbeat FAIL [brain] (#4): No API client — missing API key or provider not configured
+12:44:19 [WARNING] moruk.ui: Heartbeat failure: [brain] No API client — missing API key or provider not configured
+12:44:19 [WARNING] moruk.ui: Brain failure — reinitializing client...
+12:44:29 [WARNING] moruk.heartbeat: Heartbeat FAIL [brain] (#5): No API client — missing API key or provider not configured
+12:44:29 [WARNING] moruk.ui: Heartbeat failure: [brain] No API client — missing API key or provider not configured
+12:44:29 [WARNING] moruk.ui: Brain failure — reinitializing client...
+12:44:39 [WARNING] moruk.heartbeat: Heartbeat FAIL [brain] (#6): No API client — missing API key or provider not configured
+12:44:39 [WARNING] moruk.ui: Heartbeat failure: [brain] No API client — missing API key or provider not configured
+12:44:39 [WARNING] moruk.ui: Brain failure — reinitializing client...
+12:44:49 [WARNING] moruk.heartbeat: Heartbeat FAIL [brain] (#7): No API client — missing API key or provider not configured
+12:44:49 [WARNING] moruk.ui: Heartbeat failure: [brain] No API client — missing API key or provider not configured
+12:44:49 [WARNING] moruk.ui: Brain failure — reinitializing client...
+12:44:59 [WARNING] moruk.heartbeat: Heartbeat FAIL [brain] (#8): No API client — missing API key or provider not configured
+12:44:59 [WARNING] moruk.ui: Heartbeat failure: [brain] No API client — missing API key or provider not configured
+12:44:59 [WARNING] moruk.ui: Brain failure — reinitializing client...
+12:45:00 [INFO] moruk.ui: Shutdown initiated...
+12:45:00 [INFO] moruk.heartbeat: Heartbeat stopped
+12:45:00 [INFO] moruk.ui: Shutdown complete
+12:45:00 [INFO] moruk: MORUK OS shutdown (exit code: 0)
+12:48:25 [INFO] moruk: ==================================================
+12:48:25 [INFO] moruk: MORUK OS starting...
+12:48:25 [INFO] moruk: Python: /usr/bin/python3 (3.12)
+12:48:25 [INFO] moruk: venv site-packages: not needed (already in venv)
+12:48:25 [INFO] moruk: ==================================================
+12:48:26 [WARNING] moruk.startup: Startup Warning: Optional missing: anthropic
+12:48:26 [WARNING] moruk.startup: Startup Warning: Kein API Key konfiguriert — click ⚙ to setup
+12:48:26 [INFO] moruk.startup: Startup: ✓ PyQt6
+12:48:26 [INFO] moruk.startup: Startup: ✓ openai
+12:48:26 [INFO] moruk.startup: Startup: DB wird neu erstellt
+12:48:26 [INFO] moruk.startup: Startup: ✓ System Prompt (8956 bytes)
+12:48:26 [INFO] moruk.startup: Startup: ✓ Disk: 599GB frei (29% genutzt)
+12:48:26 [INFO] moruk.startup: Startup: ✓ RAM: 39852MB verfügbar (16% genutzt)
+12:48:26 [INFO] moruk.startup: Startup: ✓ Watchdog: Keine Crashes
+12:48:26 [INFO] moruk: App font set to: Noto Sans
+12:48:26 [INFO] moruk.brain: Brain initialized. Provider: anthropic, configured: False
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'browser' from browser.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'code_analyzer' from code_analyzer.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'file_analyzer' from file_analyzer.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'file_manager' from file_manager.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'gpu_monitor' from gpu_monitor.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'gui' from gui.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'hardware_monitor' from hardware_monitor.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'image_generator' from image_generator.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'list_tools' from list_tools.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'media_control' from media_control.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'ml' from ml.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'multi_agent' from multi_agent.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'notification' from notification.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'password_generator' from password_generator.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'scheduler' from scheduler.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'summarizer' from summarizer.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'system_info' from system_info.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'system_watchdog' from system_watchdog.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'tasks' from tasks.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'translator' from translator.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'tts' from tts.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'type_hinter' from type_hinter.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'video' from video.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'vision' from vision.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'voice' from voice.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'web_monitor' from web_monitor.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'web_scraper' from web_scraper.py
+12:48:26 [INFO] moruk.plugins: Plugin loaded: 'web_search' from web_search.py
+12:48:26 [INFO] moruk.plugins: Loaded 28 plugins: ['browser', 'code_analyzer', 'file_analyzer', 'file_manager', 'gpu_monitor', 'gui', 'hardware_monitor', 'image_generator', 'list_tools', 'media_control', 'ml', 'multi_agent', 'notification', 'password_generator', 'scheduler', 'summarizer', 'system_info', 'system_watchdog', 'tasks', 'translator', 'tts', 'type_hinter', 'video', 'vision', 'voice', 'web_monitor', 'web_scraper', 'web_search']
+12:48:26 [INFO] moruk.monitor_engine: MonitorEngine started (0 monitors)
+12:48:26 [INFO] moruk.ui: MonitorEngine started (0 monitors)
+12:48:26 [INFO] moruk.heartbeat: Heartbeat: registered 'brain'
+12:48:26 [INFO] moruk.heartbeat: Heartbeat: registered 'autonomy_loop'
+12:48:26 [INFO] moruk.heartbeat: Heartbeat: registered 'task_manager'
+12:48:26 [INFO] moruk.heartbeat: Heartbeat started
+12:48:27 [INFO] moruk.ui: System Watchdog gestartet
+12:48:27 [INFO] moruk: MORUK OS UI ready
+12:48:35 [INFO] moruk.ui: Shutdown initiated...
+12:48:35 [INFO] moruk.heartbeat: Heartbeat stopped
+12:48:35 [INFO] moruk.ui: Shutdown complete
+12:48:35 [INFO] moruk: MORUK OS shutdown (exit code: 0)
+12:50:18 [INFO] moruk: ==================================================
+12:50:18 [INFO] moruk: MORUK OS starting...
+12:50:18 [INFO] moruk: Python: /usr/bin/python3 (3.12)
+12:50:18 [INFO] moruk: venv site-packages: not needed (already in venv)
+12:50:18 [INFO] moruk: ==================================================
+12:50:18 [WARNING] moruk.startup: Startup Warning: Optional missing: anthropic
+12:50:18 [WARNING] moruk.startup: Startup Warning: Kein API Key konfiguriert — click ⚙ to setup
+12:50:18 [INFO] moruk.startup: Startup: ✓ PyQt6
+12:50:18 [INFO] moruk.startup: Startup: ✓ openai
+12:50:18 [INFO] moruk.startup: Startup: DB wird neu erstellt
+12:50:18 [INFO] moruk.startup: Startup: ✓ System Prompt (8956 bytes)
+12:50:18 [INFO] moruk.startup: Startup: ✓ Disk: 599GB frei (29% genutzt)
+12:50:18 [INFO] moruk.startup: Startup: ✓ RAM: 39848MB verfügbar (16% genutzt)
+12:50:18 [INFO] moruk.startup: Startup: ✓ Watchdog: Keine Crashes
+12:50:18 [INFO] moruk: App font set to: Noto Sans
+12:50:19 [INFO] moruk.brain: Brain initialized. Provider: anthropic, configured: False
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'browser' from browser.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'code_analyzer' from code_analyzer.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'file_analyzer' from file_analyzer.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'file_manager' from file_manager.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'gpu_monitor' from gpu_monitor.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'gui' from gui.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'hardware_monitor' from hardware_monitor.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'image_generator' from image_generator.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'list_tools' from list_tools.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'media_control' from media_control.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'ml' from ml.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'multi_agent' from multi_agent.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'notification' from notification.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'password_generator' from password_generator.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'scheduler' from scheduler.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'summarizer' from summarizer.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'system_info' from system_info.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'system_watchdog' from system_watchdog.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'tasks' from tasks.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'translator' from translator.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'tts' from tts.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'type_hinter' from type_hinter.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'video' from video.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'vision' from vision.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'voice' from voice.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'web_monitor' from web_monitor.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'web_scraper' from web_scraper.py
+12:50:19 [INFO] moruk.plugins: Plugin loaded: 'web_search' from web_search.py
+12:50:19 [INFO] moruk.plugins: Loaded 28 plugins: ['browser', 'code_analyzer', 'file_analyzer', 'file_manager', 'gpu_monitor', 'gui', 'hardware_monitor', 'image_generator', 'list_tools', 'media_control', 'ml', 'multi_agent', 'notification', 'password_generator', 'scheduler', 'summarizer', 'system_info', 'system_watchdog', 'tasks', 'translator', 'tts', 'type_hinter', 'video', 'vision', 'voice', 'web_monitor', 'web_scraper', 'web_search']
+12:50:19 [INFO] moruk.monitor_engine: MonitorEngine started (0 monitors)
+12:50:19 [INFO] moruk.ui: MonitorEngine started (0 monitors)
+12:50:19 [INFO] moruk.heartbeat: Heartbeat: registered 'brain'
+12:50:19 [INFO] moruk.heartbeat: Heartbeat: registered 'autonomy_loop'
+12:50:19 [INFO] moruk.heartbeat: Heartbeat: registered 'task_manager'
+12:50:19 [INFO] moruk.heartbeat: Heartbeat started
+12:50:19 [INFO] moruk.ui: System Watchdog gestartet
+12:50:19 [INFO] moruk: MORUK OS UI ready
+12:50:29 [WARNING] moruk.heartbeat: Heartbeat FAIL [brain] (#1): No API client — missing API key or provider not configured
+12:50:29 [WARNING] moruk.ui: Heartbeat failure: [brain] No API client — missing API key or provider not configured
+12:50:29 [WARNING] moruk.ui: Brain failure — reinitializing client...
+12:50:39 [WARNING] moruk.heartbeat: Heartbeat FAIL [brain] (#2): No API client — missing API key or provider not configured
+12:50:39 [WARNING] moruk.ui: Heartbeat failure: [brain] No API client — missing API key or provider not configured
+12:50:39 [WARNING] moruk.ui: Brain failure — reinitializing client...
+12:50:49 [WARNING] moruk.heartbeat: Heartbeat FAIL [brain] (#3): No API client — missing API key or provider not configured
+12:50:49 [WARNING] moruk.ui: Heartbeat failure: [brain] No API client — missing API key or provider not configured
+12:50:49 [WARNING] moruk.ui: Brain failure — reinitializing client...
+12:50:58 [INFO] moruk.ui: Shutdown initiated...
+12:50:58 [INFO] moruk.heartbeat: Heartbeat stopped
+12:50:58 [INFO] moruk.ui: Shutdown complete
+12:50:58 [INFO] moruk: MORUK OS shutdown (exit code: 0)
