@@ -3,14 +3,10 @@ import json
 import re
 from pathlib import Path
 from core.logger import get_logger
-
 log = get_logger('deepthink')
 DATA_DIR = Path(__file__).parent.parent / 'data'
-
 REVIEW_SYSTEM_PROMPT = 'You are a strict AI supervisor. Your job is to review responses from a smaller AI model.\n\nEvaluate the response for:\n1. Correctness — Is the answer factually accurate and logically sound?\n2. Completeness — Does it fully address the user\'s request?\n3. Safety — Does it contain risky actions (e.g. file deletions, destructive commands) without justification?\n4. Clarity — Is it clear and not confusing or misleading?\n\nRespond ONLY with a JSON object in this exact format (no markdown, no extra text):\n{\n  "verdict": "approve" | "revise" | "reject",\n  "confidence": 0.0-1.0,\n  "issues": ["issue1", "issue2"],\n  "suggestion": "What the model should do differently (only if verdict is revise or reject)"\n}\n\nVerdicts:\n- approve: Response is good. No changes needed.\n- revise: Response has fixable issues. Provide a suggestion.\n- reject: Response is wrong, dangerous, or completely misses the point. You will answer directly instead.\n\nBe strict but fair. Only revise/reject when clearly necessary.'
-
 DECOMPOSE_SYSTEM_PROMPT = 'You are a senior software architect. Your job is to break down project requests into concrete, ordered subtasks.\n\nRules:\n- Each subtask must be a single, atomic unit of work.\n- Order by dependency (what must be built first).\n- Include clear "done criteria" for each subtask.\n- If modifying existing files, specify WHICH file and WHAT to change.\n- Keep subtasks between 3-10.\n\nAlways respond ONLY with a JSON object (no markdown, no extra text).'
-
 SUBTASK_REVIEW_SYSTEM_PROMPT = 'You are a strict code reviewer. Your job is to review the execution result of a subtask within a larger project.\n\nEvaluate:\n1. Was the subtask completed according to the done criteria?\n2. Are there bugs, issues, or missing pieces?\n3. Is the code quality acceptable?\n\nBe strict but fair. Approve if the core work is done correctly, even if minor improvements are possible.\n\nAlways respond ONLY with a JSON object (no markdown, no extra text).'
 
 class DeepThink:
@@ -88,43 +84,20 @@ class DeepThink:
             return {'verdict': 'approve', 'confidence': 0.5, 'issues': [], 'suggestion': ''}
 
     def review_tool_call(self, tool_name: str, params: dict, user_message: str) -> dict:
-        """Sicherheits-Shield für Tool-Aufrufe.
-        Blockiert echte OS-Systempfade und das Home-Verzeichnis, ERLAUBT aber den moruk-os Workspace.
-        """
+        """Sicherheits-Shield für Tool-Aufrufe."""
         params_str = json.dumps(params).lower()
-
-        # Reale Systempfade + Home-Directory blockieren
-        real_system_paths = ['/etc/', '/usr/', '/bin/', '/sbin/', '/lib/', '/lib64/',
-                             '/sys/', '/proc/', '/root/', '/boot/', '/dev/', '/home/']
-
-        if tool_name == 'terminal':
-            cmd = params.get('command', '').lstrip().lower()
-            # Lesende Befehle immer erlauben
-            readonly_prefixes = ('grep', 'cat ', 'ls ', 'find ', 'head ', 'tail ',
-                                 'wc ', 'diff ', 'stat ', 'less ', 'more ', 'echo ', 'pwd', 'which ')
-            if cmd.startswith(readonly_prefixes):
-                return {'verdict': 'approve', 'approved': True}
-                
-            # Destruktive Befehle auf echten Systempfaden blockieren (außerhalb von moruk-os)
-            destructive = ['rm ', 'rm\t', 'mv ', 'chmod', 'chown', 'truncate', 'shred', 'dd ']
-            if any(x in cmd for x in destructive):
-                if any(sp in cmd for sp in real_system_paths) and "moruk-os" not in cmd:
-                    return {'verdict': 'reject', 'approved': False,
-                            'reason': 'Shield: Destruktive Befehle auf OS-Systempfaden untersagt.'}
-
-        elif tool_name in ('write_file', 'self_edit'):
-            path = params.get('path', '').lower()
-            
-            # Schreibzugriff auf echte OS-Systempfade blockieren (außerhalb von moruk-os)
-            if any(sp in path for sp in real_system_paths) and "moruk-os" not in path:
-                return {'verdict': 'reject', 'approved': False,
-                        'reason': f'Shield: Schreibzugriff auf OS-Systemverzeichnis via {tool_name} verweigert.'}
-                        
-            # user_settings.json schützen
-            if 'user_settings.json' in path:
-                return {'verdict': 'reject', 'approved': False,
-                        'reason': 'Shield: user_settings.json ist geschützt — nutze Settings Dialog.'}
-
+        forbidden = ['/core/', '/config/', '/moruk-os/core/', '/moruk-os/config/']
+        if any((f in params_str for f in forbidden)):
+            if tool_name == 'terminal':
+                cmd = params.get('command', '').lstrip().lower()
+                readonly_prefixes = ('grep', 'cat ', 'ls ', 'find ', 'head ', 'tail ', 'wc ', 'diff ', 'stat ', 'less ', 'more ')
+                if cmd.startswith(readonly_prefixes):
+                    return {'verdict': 'approve', 'approved': True}
+                destructive = ['rm ', 'rm\t', 'mv ', '> ', '>> ', 'chmod', 'chown', 'truncate', 'shred', 'dd ', 'tee ']
+                if any((x in cmd for x in destructive)):
+                    return {'verdict': 'reject', 'approved': False, 'reason': 'Shield: Destruktive Befehle auf Systempfaden untersagt.'}
+            elif tool_name in ('write_file', 'self_edit', 'system_repair'):
+                return {'verdict': 'reject', 'approved': False, 'reason': f'Shield: Schreibzugriff auf System-Verzeichnisse via {tool_name} verweigert.'}
         return {'verdict': 'approve', 'approved': True}
 
     def decompose_project(self, user_prompt: str, codebase_context: str='') -> dict | None:
@@ -134,19 +107,8 @@ class DeepThink:
         if not self.is_enabled():
             log.warning('DeepThink not enabled for decompose_project')
             return None
-            
         model = self.settings.get('deepthink_model', '')
-        
-        # BUGFIX: Syntax Error behoben durch Triple-Quotes (f""")
-        user_content = f"""PROJECT REQUEST:
-{user_prompt}
-
-EXISTING CODEBASE CONTEXT:
-{codebase_context or 'No additional context.'}
-
-Break this into ordered subtasks. Respond ONLY with JSON:
-{{"project_title": "...", "project_summary": "...", "subtasks": [{{"title": "...", "description": "...", "done_criteria": "...", "files_involved": ["..."], "priority": "high|normal|low", "depends_on": []}}]}}"""
-
+        user_content = f'PROJECT REQUEST:\n{user_prompt}\n\nEXISTING CODEBASE CONTEXT:\n{codebase_context or 'No additional context.'}\n\nBreak this into ordered subtasks. Respond ONLY with JSON:\n{{"project_title": "...", "project_summary": "...", "subtasks": [{{"title": "...", "description": "...", "done_criteria": "...", "files_involved": ["..."], "priority": "high|normal|low"}}]}}'
         try:
             raw = self._call_llm(system=DECOMPOSE_SYSTEM_PROMPT, user_content=user_content, model=model, max_tokens=4096, temperature=0.3)
             result = self._parse_json_safe(raw, default=None)
@@ -262,8 +224,7 @@ Break this into ordered subtasks. Respond ONLY with JSON:
                 if chunk.choices and chunk.choices[0].delta.content:
                     token = chunk.choices[0].delta.content
                     full_text += token
-                    if on_token:
-                        on_token(token)
+                    on_token(token)
             return full_text
         else:
             resp = self.client.chat.completions.create(model=model, max_tokens=max_tokens, temperature=temperature, messages=oai_messages)
