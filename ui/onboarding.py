@@ -352,7 +352,7 @@ class OnboardingDialog(QDialog):
     def _go_next(self):
         current = self.stack.currentIndex()
 
-        if current == 3:  # Letzte Seite — fertig
+        if current >= 2:  # Letzte Seite — fertig
             self._finish()
             return
 
@@ -382,6 +382,7 @@ class OnboardingDialog(QDialog):
     def _update_header(self, idx):
         titles = ["Willkommen", "Dein Profil", "Systemcheck"]
         icons  = ["🌟", "👤", "🔍"]
+        idx = min(idx, len(titles) - 1)
         self.header.setText(f'<span style="font-size:24px">{icons[idx]}</span>  '
                             f'<span style="font-size:18px; font-weight:bold">{titles[idx]}</span>')
 
