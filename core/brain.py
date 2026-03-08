@@ -349,7 +349,7 @@ ALWAYS use: <tool_call>{...}</tool_call> XML tags exactly as shown above.
             if extra_context:
                 system += f"\n\n{extra_context}"
         else:
-            system = self.system_prompt
+            system = self._load_system_prompt()  # Profil bei jedem think() neu laden
             if extra_context:
                 system += f"\n\n--- CURRENT CONTEXT ---\n{extra_context}"
 
