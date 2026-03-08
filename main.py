@@ -93,6 +93,8 @@ def main():
         onboarding = OnboardingDialog()
         onboarding.exec()
         log.info("Onboarding completed")
+        # Startup result neu laden damit Brain die API Keys kennt
+        result = checker.run_all()
 
     # ── Main Window ───────────────────────────────────────────
     from ui.main_window import MainWindow
