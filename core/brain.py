@@ -116,10 +116,35 @@ class Brain:
 
     def _load_system_prompt(self) -> str:
         prompt_path = CONFIG_DIR / "system_prompt.txt"
+        base = "You are Moruk OS, an autonomous AI operating system."
         if prompt_path.exists():
             with open(prompt_path, "r") as f:
-                return f.read()
-        return "You are Moruk OS, an autonomous AI operating system."
+                base = f.read()
+        # User Profile Preferences in System Prompt injizieren
+        try:
+            import json
+            profile_path = DATA_DIR / "user_profile.json"
+            if profile_path.exists():
+                with open(profile_path, "r") as f:
+                    profile = json.load(f)
+                lines = []
+                if profile.get("name"):
+                    lines.append(f"- User's name: {profile['name']}")
+                if profile.get("job"):
+                    lines.append(f"- User's job: {profile['job']}")
+                if profile.get("bio"):
+                    lines.append(f"- About user: {profile['bio']}")
+                prefs = profile.get("preferences", [])
+                if prefs:
+                    lines.append("- Known preferences:")
+                    for p in prefs[-20:]:
+                        lines.append(f"  • {p}")
+                if lines:
+                    base += "\n\n═══════════════════════════════════════════════════════\nUSER PROFILE — WHAT YOU KNOW ABOUT THIS USER:\n═══════════════════════════════════════════════════════\n"
+                    base += "\n".join(lines)
+        except Exception:
+            pass
+        return base
 
     # ── Conversation Persistence ──────────────────────────────
 
@@ -479,11 +504,6 @@ ALWAYS use: <tool_call>{...}</tool_call> XML tags exactly as shown above.
 
                         if on_tool_result:
                             on_tool_result(tool_name, result)
-
-                        # task_complete/task_fail → Loop sofort beenden
-                        if tool_name in ("task_complete", "complete_task", "task_fail", "fail_task"):
-                            full_response = result.get("result", "Task abgeschlossen.")
-                            break
                     
                     # ... Rest wie gehabt (results_text, history update)
 
@@ -494,7 +514,7 @@ ALWAYS use: <tool_call>{...}</tool_call> XML tags exactly as shown above.
                     results_truncated = results_text[:2000] + "..." if len(results_text) > 2000 else results_text
                     active_history.append({
                         "role": "user",
-                        "content": f"[SYSTEM] Tool execution results:\n{results_truncated}\n\nIf the task is complete, respond with your final answer. If more steps are needed, continue."
+                        "content": f"[SYSTEM] Tool execution results:\n{results_truncated}\n\nContinue with your analysis or next action."
                     })
 
                 else:
@@ -514,9 +534,9 @@ ALWAYS use: <tool_call>{...}</tool_call> XML tags exactly as shown above.
                             full_response = "[Moruk OS] Keine Antwort vom Modell erhalten. Bitte nochmal versuchen."
 
                     # DeepThink Review (wenn konfiguriert + relevant)
-                    # DeepThink Review: nur bei depth 5 (autonomous) oder force_deepthink
-                    # Bei depth 3/4 kein Review — verhindert Doppel-Ausführung
-                    _dt_should = depth >= 5 or force_deepthink
+                    # DeepThink Review: depth 4 = nur bei self_edit/write_file, depth 5 = immer
+                    _dt_has_risky = any(x in full_response for x in ("self_edit", "write_file", "terminal"))
+                    _dt_should = depth >= 5 or (depth == 4 and _dt_has_risky)
                     if (self.deepthink and self.deepthink.is_enabled()
                             and _dt_should
                             and self.deepthink.should_review(user_message, full_response, depth)):
