@@ -1470,6 +1470,26 @@ class MainWindow(QMainWindow):
         self.state.record_interaction()
         self.memory.remember_short(text or "[file attachment]", category="user_input")
 
+        # Auto-detect "merke dir" → direkt in long-term memory + user profile speichern
+        if text:
+            txt_lower = text.lower().strip()
+            merke_prefixes = ["merke dir:", "merke dir ", "remember:", "remember ", "save:", "speichere:"]
+            for prefix in merke_prefixes:
+                if txt_lower.startswith(prefix):
+                    info = text[len(prefix):].strip()
+                    if info:
+                        personal_keywords = [
+                            "liebling", "favorite", "mag ", "liebe ", "hasse ",
+                            "mein name", "ich bin", "ich arbeite", "mein job",
+                            "mein hobby", "ich wohne", "meine familie", "ich heiße",
+                            "mein alter", "ich esse", "ich trinke", "ich spiele",
+                            "ich lese", "mein beruf", "ich mag", "my name", "i am",
+                            "my hobby", "my job", "i live", "i eat", "i drink"
+                        ]
+                        category = "personal" if any(kw in txt_lower for kw in personal_keywords) else "learned"
+                        self.memory.remember_long(info, category=category)
+                    break
+
         # ── Project Command ──
         if text.startswith(("/project ", "!project ")):
             prompt = text.split(" ", 1)[1]

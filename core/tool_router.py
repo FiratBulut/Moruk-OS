@@ -2,6 +2,7 @@ import json
 import os
 import re
 from pathlib import Path
+from core.deepthink import DeepThink
 from core.executor import Executor
 from core.memory import Memory
 from core.plugin_manager import PluginManager
@@ -34,9 +35,6 @@ class ToolRouter:
         self.reflector = None
         self.plugin_manager = PluginManager()
         self.self_model = SelfModel()
-
-        # FIX: UI-Kompatibilität — MainWindow erwartet tool_router.deepthink (Zeile 984)
-        from core.deepthink import DeepThink
         self.deepthink = DeepThink()
 
         # list_tools Plugin mit PluginManager verbinden
@@ -67,9 +65,6 @@ class ToolRouter:
         calls = []
         for match in self.TOOL_BLOCK_PATTERN.finditer(response):
             content = match.group(2).strip()
-            # Markdown-Codeblöcke entfernen falls Modell JSON umschließt
-            content = content.removeprefix('```json').removeprefix('```').removesuffix('```').strip()
-
             if not content: continue
 
             # Attempt 1: Full JSON block
@@ -123,13 +118,6 @@ class ToolRouter:
         return "\n".join(formatted)
 
     def execute_tool(self, call: dict, user_message: str = "") -> dict:
-        """Wrapper: führt Tool aus und reflektiert das Ergebnis."""
-        result = self._execute_tool_inner(call, user_message)
-        tool = call.get("tool", "")
-        self._maybe_reflect(tool, result, user_message)
-        return result
-
-    def _execute_tool_inner(self, call: dict, user_message: str = "") -> dict:
         """
         Executes a single tool call through the appropriate handler.
         """
@@ -202,7 +190,18 @@ class ToolRouter:
                 content = params.get("content", "")
                 category = params.get("category", "general")
                 tags = params.get("tags", [])
-                # remember_long ist die korrekte Methode (nicht .store())
+                # Auto-detect personal info → save to user profile
+                personal_keywords = [
+                    "liebling", "favorite", "mag ", "mag keine", "liebe ", "hasse ",
+                    "mein name", "my name", "ich bin", "i am", "ich arbeite", "i work",
+                    "mein job", "my job", "mein hobby", "my hobby", "ich wohne", "i live",
+                    "meine familie", "my family", "ich heiße", "mein alter", "my age",
+                    "ich esse", "i eat", "ich trinke", "i drink", "mein lieblings",
+                    "ich spiele", "ich lese", "mein beruf", "ich mag"
+                ]
+                content_lower = content.lower()
+                if any(kw in content_lower for kw in personal_keywords):
+                    category = "personal"
                 self.memory.remember_long(content, category=category, tags=tags)
                 return {"tool": "memory_store", "success": True, "result": "Stored in long-term memory"}
 
@@ -234,21 +233,3 @@ class ToolRouter:
 
         except Exception as e:
             return {"tool": tool, "success": False, "result": f"Tool error: {type(e).__name__}: {e}"}
-
-    def _maybe_reflect(self, tool: str, result: dict, context: str = ""):
-        """Nur Fehler ins Reflection Log — keine erfolgreichen Tool-Calls."""
-        if not self.reflector:
-            return
-        # Nur bei Fehlern reflektieren — Erfolge überfüllen das Log
-        success = result.get("success", False)
-        if success:
-            return
-        skip_tools = {"memory_search", "memory_store", "list_tools", "task_complete", "task_fail"}
-        if tool in skip_tools:
-            return
-        try:
-            result_text = str(result.get("result", ""))[:300]
-            action = f"{tool}: {context[:80]}" if context else tool
-            self.reflector.reflect(action, result_text, success=False)
-        except Exception:
-            pass

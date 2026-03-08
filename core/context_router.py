@@ -38,6 +38,9 @@ ACTION_KEYWORDS = [
     'lösch', 'delete', 'entfern', 'remove', 'fix', 'reparier', 'debug',
     'ändere', 'change', 'update', 'modif', 'edit', 'programmier', 'code',
     'implementier', 'develop', 'konfigur', 'config', 'setup',
+    'suche', 'search', 'find', 'finde', 'lookup', 'research', 'analysier',
+    'zeig', 'show', 'liste', 'list', 'vergleich', 'compare', 'prüf', 'check',
+    'lade', 'download', 'öffne', 'open', 'lese', 'read', 'scrap',
 ]
 
 DEV_KEYWORDS = [

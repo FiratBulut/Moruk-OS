@@ -355,17 +355,30 @@ class UserProfileDialog(QDialog):
         sessions = p.get("sessions_analyzed", 0)
 
         # Gelernte Preferences ins Input-Feld laden (als Referenz)
-        prefs = p.get("explicit_preferences", [])
+        # Preferences aus user_profile.json lesen
+        import json
+        from pathlib import Path
+        profile_path = Path(__file__).parent.parent / "data" / "user_profile.json"
+        try:
+            with open(profile_path) as f:
+                up = json.load(f)
+            prefs_from_profile = up.get("preferences", [])
+        except Exception:
+            prefs_from_profile = []
+        prefs = p.get("explicit_preferences", []) + prefs_from_profile
         manual = p.get("manual_notes", "")
         if manual:
             self.user_input.setPlainText(manual)
 
-        if sessions == 0:
+        if sessions == 0 and not prefs:
             self.profile_display.setPlainText(
                 "No learned data yet.\n\n"
                 "Moruk learns automatically after each conversation.\n"
                 "You can also write above to tell him directly."
             )
+            return
+        if prefs and sessions == 0:
+            self.profile_display.setPlainText("\n".join(f"• {x}" for x in prefs))
             return
 
         lines = []
