@@ -86,6 +86,15 @@ def main():
     app.setFont(app_font)
     log.info(f"App font set to: {base_font}")
 
+    # ── Onboarding (erster Start) ────────────────────────────
+    from ui.onboarding import should_show_onboarding, OnboardingDialog
+    if should_show_onboarding():
+        log.info("First run — showing onboarding wizard")
+        onboarding = OnboardingDialog()
+        onboarding.exec()
+        log.info("Onboarding completed")
+
+    # ── Main Window ───────────────────────────────────────────
     from ui.main_window import MainWindow
     window = MainWindow(startup_result=result)
     window.show()
