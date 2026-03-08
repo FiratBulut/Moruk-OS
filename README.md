@@ -61,7 +61,14 @@ Moruk OS learns your preferences, working style, and domain expertise over time 
 
 ## Screenshots
 
-> Coming soon — contributions welcome!
+### Project Manager — Autonomous multi-step execution
+![Project Manager](screenshots/Bildschirmfoto%20vom%202026-03-08%2011-28-57.png)
+
+### Live Activity — Real-time tool calls & code generation
+![Live Activity](screenshots/Bildschirmfoto%20vom%202026-03-08%2011-31-17.png)
+
+### Sidebar — Tasks, Goals & Reflection Log
+![Sidebar](screenshots/Bildschirmfoto%20vom%202026-03-08%2011-33-02.png)
 
 ---
 
