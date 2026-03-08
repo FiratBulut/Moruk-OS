@@ -466,7 +466,11 @@ class UserProfileDialog(QDialog):
         en_words = ["my", "name", "i am", "i work", "i like", "i prefer"]
         text_lower = text.lower()
         if any(w in text_lower for w in de_words):
-            self.engine.profile["language"]["primary"] = "de"
+            lang = self.engine.profile.get("language", {})
+            if isinstance(lang, str):
+                lang = {"primary": lang}
+            lang["primary"] = "de"
+            self.engine.profile["language"] = lang
         elif any(w in text_lower for w in en_words):
             self.engine.profile["language"]["primary"] = "en"
 
