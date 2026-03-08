@@ -1,0 +1,18 @@
+{
+  "audio": {
+    "sample_rate": 22050
+  },
+  "espeak": {
+    "voice": "de",
+    "name": "thorsten-high"
+  },
+  "num_symbols": 147,
+  "num_speakers": 1,
+  "phoneme_id_map": {},
+  "inference": {
+    "length_scale": 1.0,
+    "noise_scale": 0.667,
+    "noise_w": 0.8
+  },
+  "punctuation": -1.0
+}

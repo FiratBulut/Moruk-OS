@@ -1,0 +1,36 @@
+=== WATCHDOG DIAGNOSTIC AUDIT LOG ===
+Target: gpu_monitor_v1.py
+--------------------------------------
+{
+  "scenario": "low",
+  "raw_bytes": 2148466231,
+  "gpu_load": 33,
+  "expected_vram_mib": 2048,
+  "actual_vram_mib": 2048,
+  "delta": 0,
+  "error_percent": 0.0,
+  "status": "PASS"
+}
+--------------------------------------
+{
+  "scenario": "high",
+  "raw_bytes": 6441567075,
+  "gpu_load": 92,
+  "expected_vram_mib": 6143,
+  "actual_vram_mib": 6449.1,
+  "delta": 306.1,
+  "error_percent": 4.98,
+  "status": "FAIL (Logic Drift Detected)"
+}
+--------------------------------------
+{
+  "scenario": "high",
+  "raw_bytes": 6441467758,
+  "gpu_load": 90,
+  "expected_vram_mib": 6143,
+  "actual_vram_mib": 6449.1,
+  "delta": 306.1,
+  "error_percent": 4.98,
+  "status": "FAIL (Logic Drift Detected)"
+}
+--------------------------------------
