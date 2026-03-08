@@ -144,8 +144,7 @@ class OnboardingDialog(QDialog):
 
         self.stack.addWidget(self._page_welcome())    # 0
         self.stack.addWidget(self._page_profile())    # 1
-        self.stack.addWidget(self._page_apikeys())    # 2
-        self.stack.addWidget(self._page_syscheck())   # 3
+        self.stack.addWidget(self._page_syscheck())   # 2
 
         # Footer nav
         footer = QWidget()
@@ -159,7 +158,7 @@ class OnboardingDialog(QDialog):
         self.btn_back.clicked.connect(self._go_back)
         self.btn_back.hide()
 
-        self.step_label = QLabel("Schritt 1 von 4")
+        self.step_label = QLabel("Schritt 1 von 3")
         self.step_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.step_label.setObjectName("stepLabel")
 
@@ -357,12 +356,10 @@ class OnboardingDialog(QDialog):
             self._finish()
             return
 
-        if current == 2:  # API Keys → Systemcheck
-            if not self._validate_apikeys():
-                return
-            self._save_all()
-            self.stack.setCurrentIndex(3)
-            self._update_header(3)
+        if current == 1:  # Profil → Systemcheck
+            self._save_profile()
+            self.stack.setCurrentIndex(2)
+            self._update_header(2)
             self._run_syscheck()
             self.btn_next.setText("Los geht's! 🚀")
             self.btn_next.setEnabled(False)
@@ -371,7 +368,7 @@ class OnboardingDialog(QDialog):
             self._update_header(current + 1)
 
         self.btn_back.show() if self.stack.currentIndex() > 0 else self.btn_back.hide()
-        self.step_label.setText(f"Schritt {self.stack.currentIndex() + 1} von 4")
+        self.step_label.setText(f"Schritt {self.stack.currentIndex() + 1} von 3")
 
     def _go_back(self):
         current = self.stack.currentIndex()
@@ -380,11 +377,11 @@ class OnboardingDialog(QDialog):
             self._update_header(current - 1)
         self.btn_back.hide() if self.stack.currentIndex() == 0 else self.btn_back.show()
         self.btn_next.setText("Weiter →")
-        self.step_label.setText(f"Schritt {self.stack.currentIndex() + 1} von 4")
+        self.step_label.setText(f"Schritt {self.stack.currentIndex() + 1} von 3")
 
     def _update_header(self, idx):
-        titles = ["Willkommen", "Dein Profil", "API Keys", "Systemcheck"]
-        icons  = ["🌟", "👤", "🔑", "🔍"]
+        titles = ["Willkommen", "Dein Profil", "Systemcheck"]
+        icons  = ["🌟", "👤", "🔍"]
         self.header.setText(f'<span style="font-size:24px">{icons[idx]}</span>  '
                             f'<span style="font-size:18px; font-weight:bold">{titles[idx]}</span>')
 
@@ -431,11 +428,12 @@ class OnboardingDialog(QDialog):
         failures = sum(1 for v in info.values() if not v["ok"])
 
         if failures == 0:
-            self.syscheck_subtitle.setText("✅ Alles gut! Moruk OS ist startklar.")
-        else:
             self.syscheck_subtitle.setText(
-                f"⚠️  {failures} Warnung(en) — Moruk OS startet trotzdem."
+                "✅ Alles gut! Öffne nach dem Start Settings ⚙ und trage deinen API Key ein."
             )
+        else:
+            msg = f"⚠️  {failures} Warnung(en) — Moruk OS startet trotzdem. Öffne Settings ⚙ und trage deinen API Key ein."
+            self.syscheck_subtitle.setText(msg)
 
         self.btn_next.setEnabled(True)
         self.btn_next.setText("Los geht's! 🚀")
@@ -482,9 +480,37 @@ class OnboardingDialog(QDialog):
         self.settings = settings
 
     def _finish(self):
-        self._save_all()
+        self._save_profile()
         self.finished_signal.emit(self.settings)
         self.accept()
+
+    def _save_profile(self):
+        """Nur Profil speichern — API Keys kommen über Settings."""
+        import json, os
+        profile = {
+            "name": self.profile_name.text().strip(),
+            "job": self.profile_job.text().strip(),
+            "language": self.profile_lang.currentText(),
+            "bio": self.profile_bio.toPlainText().strip(),
+            "onboarding_done": True
+        }
+        os.makedirs(os.path.dirname(USER_PROFILE_PATH), exist_ok=True)
+        with open(USER_PROFILE_PATH, "w") as f:
+            json.dump(profile, f, indent=2, ensure_ascii=False)
+
+        # onboarding_done in settings setzen
+        settings = {}
+        if os.path.exists(CONFIG_PATH):
+            try:
+                with open(CONFIG_PATH) as f:
+                    settings = json.load(f)
+            except Exception:
+                pass
+        settings["onboarding_done"] = True
+        os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+        with open(CONFIG_PATH, "w") as f:
+            json.dump(settings, f, indent=2)
+        self.settings = settings
 
     # ── Helpers ──────────────────────────────────────────────
 
