@@ -2466,6 +2466,13 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         self.log.info("Shutdown initiated...")
 
+        # Session speichern beim Schließen
+        try:
+            self._save_current_session()
+            self._load_chat_history()
+        except Exception:
+            pass
+
         # Watchdog stoppen
         try:
             watchdog.stop_watchdog()
