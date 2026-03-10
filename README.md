@@ -89,7 +89,7 @@ Moruk OS learns your preferences, working style, and domain expertise over time 
 ### Install
 
 ```cd ~
-git clone https://github.com/FiratBulut/Moruk-OS.git moruk-os-test
+git clone https://github.com/FiratBulut/Moruk-OS.git Moruk OS
 cd Moruk OS
 chmod +x install.sh run.sh
 ./install.sh
