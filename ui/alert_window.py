@@ -4,7 +4,12 @@ Separates Popup-Fenster für System-Warnungen und Crash-Reports.
 """
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTextEdit,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 
@@ -14,8 +19,14 @@ class AlertWindow(QDialog):
 
     repair_requested = pyqtSignal(str)  # Signal: Reparatur angefordert (problem_id)
 
-    def __init__(self, title: str, message: str, problem_id: str = "",
-                 can_repair: bool = True, parent=None):
+    def __init__(
+        self,
+        title: str,
+        message: str,
+        problem_id: str = "",
+        can_repair: bool = True,
+        parent=None,
+    ):
         super().__init__(parent)
         self.problem_id = problem_id
         self.can_repair = can_repair
@@ -24,9 +35,9 @@ class AlertWindow(QDialog):
     def _build_ui(self, title: str, message: str):
         self.setWindowTitle("Moruk OS – System Alert")
         self.setWindowFlags(
-            Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.Dialog
+            Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.Dialog
         )
         self.setMinimumWidth(420)
         self.setMaximumWidth(560)
@@ -121,8 +132,13 @@ class AlertWindow(QDialog):
         self.accept()
 
     @staticmethod
-    def show_alert(title: str, message: str, problem_id: str = "",
-                   can_repair: bool = True, parent=None) -> 'AlertWindow':
+    def show_alert(
+        title: str,
+        message: str,
+        problem_id: str = "",
+        can_repair: bool = True,
+        parent=None,
+    ) -> "AlertWindow":
         """Convenience: Erstellt und zeigt Alert-Fenster."""
         win = AlertWindow(title, message, problem_id, can_repair, parent)
         win.show()

@@ -5,16 +5,21 @@ Generiert sichere Passwörter mit Konfigurationsoptionen.
 
 PLUGIN_NAME = "password_generator"
 PLUGIN_DESCRIPTION = "Generiert sichere Passwörter mit Konfigurationsoptionen."
-PLUGIN_PARAMS = {"length": "Passwort-Länge (default: 16)", "chars": "Zeichentypen: letters, digits, symbols, all", "count": "Anzahl zu generieren (default: 1)"}
+PLUGIN_PARAMS = {
+    "length": "Passwort-Länge (default: 16)",
+    "chars": "Zeichentypen: letters, digits, symbols, all",
+    "count": "Anzahl zu generieren (default: 1)",
+}
 
 import secrets
 import string
 
+
 def execute(params):
     try:
         length = int(params.get("length", 16))
-        chars  = params.get("chars", "all")
-        count  = int(params.get("count", 1))
+        chars = params.get("chars", "all")
+        count = int(params.get("count", 1))
 
         if length < 4 or length > 128:
             return {"success": False, "result": "Length must be between 4 and 128"}
@@ -47,21 +52,19 @@ def execute(params):
             remaining = length - len(pwd_chars)
             pwd_chars += [secrets.choice(pool) for _ in range(max(remaining, 0))]
             secrets.SystemRandom().shuffle(pwd_chars)
-            passwords.append(''.join(pwd_chars[:length]))
+            passwords.append("".join(pwd_chars[:length]))
 
-        strength = "💪 Strong" if length >= 16 else "🟡 Medium" if length >= 10 else "🔴 Weak"
-        
+        strength = (
+            "💪 Strong" if length >= 16 else "🟡 Medium" if length >= 10 else "🔴 Weak"
+        )
+
         lines = [f"🔑 Generated {count} password(s) — {strength}"]
         lines.append(f"Length: {length} | Chars: {chars}")
         lines.append("─" * 40)
         for i, pwd in enumerate(passwords, 1):
             lines.append(f"  {i}. {pwd}")
 
-        return {
-            "success": True,
-            "result": "\n".join(lines),
-            "passwords": passwords
-        }
+        return {"success": True, "result": "\n".join(lines), "passwords": passwords}
 
     except ValueError as e:
         return {"success": False, "result": f"Invalid parameter: {e}"}

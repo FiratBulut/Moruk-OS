@@ -1,7 +1,13 @@
 """
-Moruk AI OS - Project Manager
+Moruk AI OS - Project Manager v2
 Orchestriert große Projekte: DeepThink zerlegt → Small Model arbeitet ab → DeepThink reviewed.
-Workflow: Decompose → Execute Subtasks → Review Each → Final Review → Self-Edit
+Workflow: Decompose → Execute Subtasks → Review Each → Final Review
+
+v2 Änderungen:
+- execute_next_subtask() entfernt (war toter Code, identisch mit _execute_single_subtask)
+- Parallel-Execution nutzt _execute_single_subtask direkt
+- Reflector-Integration für Post-Project-Learning
+- Cleaner error handling
 """
 
 import json
@@ -113,8 +119,9 @@ class ProjectManager:
         self.reflector = reflector
 
         # State
-        self.active_project = None   # Aktuelles Projekt-Dict
+        self.active_project = None
         self.is_running = False
+        self._current_task_id = None  # Für Delete-Check von außen
 
         # Callbacks für UI-Updates
         self.on_status: Optional[Callable] = None
@@ -124,14 +131,13 @@ class ProjectManager:
         self.on_project_done: Optional[Callable] = None
 
     def _connect_multi_agent(self, brain):
-        """Verbindet Brain mit multi_agent Plugin für parallele AI-Agenten."""
+        """Verbindet Brain mit multi_agent Plugin."""
         try:
             from plugins import multi_agent as ma
             ma._brain = brain
         except Exception:
             try:
                 import importlib.util, pathlib
-                # Dynamischer, relativer Pfad statt hartkodiertem Home-Dir
                 p = pathlib.Path(__file__).parent.parent / "plugins" / "multi_agent.py"
                 if p.exists():
                     spec = importlib.util.spec_from_file_location("multi_agent", p)
@@ -141,86 +147,95 @@ class ProjectManager:
             except Exception as e:
                 log.warning(f"multi_agent brain connect failed: {e}")
 
-    def _identify_parallel_groups(self, subtasks: list) -> list:
-        """
-        Topological Sort (DAG) — gruppiert Subtasks nach Abhängigkeiten.
-        Jede Gruppe kann vollständig parallel ausgeführt werden.
-        Zirkuläre Abhängigkeiten werden sicher abgefangen.
-        """
-        n = len(subtasks)
-        groups = []
-        completed = set()
-        remaining = list(range(n))
+    def _emit_status(self, msg: str):
+        log.info(f"[PM] {msg}")
+        if self.on_status:
+            self.on_status(msg)
 
-        for _ in range(n):
-            if not remaining:
-                break
-            ready = []
-            still_waiting = []
-            for idx in remaining:
-                deps = subtasks[idx].get("depends_on", [])
-                if all(d in completed for d in deps):
-                    ready.append(idx)
-                else:
-                    still_waiting.append(idx)
+    def _emit_thought(self, msg: str):
+        log.info(f"[PM] 💭 {msg}")
+        if self.on_thought:
+            self.on_thought(msg)
 
-            if not ready:
-                # Zirkuläre Abhängigkeit — Rest sequenziell ausführen
-                log.warning(f"Circular dependency detected, running {still_waiting} sequentially")
-                for i in still_waiting:
-                    groups.append([i])
-                break
+    # ── Phase 1: Decompose ───────────────────────────────────
 
-            # Max 3 parallel (API Load)
-            for batch_start in range(0, len(ready), 3):
-                groups.append(ready[batch_start:batch_start + 3])
-            for idx in ready:
-                completed.add(idx)
-            remaining = still_waiting
+    def decompose(self, user_prompt: str, codebase_context: str = "") -> Optional[dict]:
+        """DeepThink zerlegt den User-Prompt in Subtasks."""
+        self._emit_status("🧠 DeepThink: Analyzing project...")
 
-        return groups
+        prompt = DECOMPOSE_PROMPT.format(
+            user_prompt=user_prompt,
+            codebase_context=codebase_context or "No additional context.",
+        )
 
-    def _execute_subtask_thread(self, idx: int, result_queue: queue.Queue,
-                                 on_tool_start=None, on_tool_result=None):
-        """Führt einen Subtask in einem Thread aus."""
-        try:
-            review = self._execute_single_subtask(idx, on_tool_start, on_tool_result)
-            result_queue.put((idx, review))
-        except Exception as e:
-            result_queue.put((idx, {"approved": False, "error": str(e)}))
+        if self.deepthink and self.deepthink.is_enabled():
+            raw = self.deepthink.think(prompt)
+        else:
+            self._emit_thought("DeepThink nicht aktiv — verwende Brain für Decompose")
+            raw = self.brain.think(prompt, isolated=True)
 
-    def execute_parallel_group(self, group: list, on_tool_start=None, on_tool_result=None) -> list:
-        """Führt eine Gruppe von Subtasks parallel aus."""
-        if len(group) == 1:
-            # Nur einer → direkt sequential
-            review = self._execute_single_subtask(group[0], on_tool_start, on_tool_result)
-            return [review]
+        plan = self._parse_json(raw)
+        if not plan or "subtasks" not in plan:
+            log.error(f"Decompose failed. Raw: {(raw or '')[:500]}")
+            self._emit_thought("❌ Konnte Projekt nicht zerlegen — ungültiges JSON")
+            return None
 
-        self._emit_status(f"⚡ Parallel: {len(group)} Subtasks gleichzeitig...")
-        result_queue = queue.Queue()
-        threads = []
+        subtasks = plan["subtasks"]
+        if not subtasks:
+            self._emit_thought("❌ Keine Subtasks generiert")
+            return None
 
-        for idx in group:
-            t = threading.Thread(
-                target=self._execute_subtask_thread,
-                args=(idx, result_queue, on_tool_start, on_tool_result),
-                daemon=True
+        self._emit_status(f"📋 Projekt zerlegt: {len(subtasks)} Subtasks")
+        for i, st in enumerate(subtasks, 1):
+            self._emit_thought(f"  [{i}] {st['title']}")
+
+        return plan
+
+    # ── Phase 2: Create Tasks ────────────────────────────────
+
+    def create_project_tasks(self, plan: dict) -> dict:
+        """Erstellt Parent-Task + Subtasks im TaskManager."""
+        parent = self.tasks.add_task(
+            title=f"🏗 {plan['project_title']}",
+            description=plan.get("project_summary", ""),
+            priority="high",
+        )
+        parent_id = parent["id"]
+        self._current_task_id = parent_id
+
+        subtask_ids = []
+        for i, st in enumerate(plan["subtasks"]):
+            sub = self.tasks.add_task(
+                title=f"[{i+1}/{len(plan['subtasks'])}] {st['title']}",
+                description=st.get("description", ""),
+                priority=st.get("priority", "normal"),
+                parent_id=parent_id,
             )
-            t.start()
-            threads.append(t)
+            subtask_ids.append(sub["id"])
+            self.tasks.add_subtask_id(parent_id, sub["id"])
 
-        for t in threads:
-            t.join(timeout=300)  # 5 min max per subtask
+        project = {
+            "plan": plan,
+            "parent_id": parent_id,
+            "subtask_ids": subtask_ids,
+            "results": {},
+            "reviews": {},
+            "current_index": 0,
+            "status": "ready",
+        }
 
-        reviews = {}
-        while not result_queue.empty():
-            idx, review = result_queue.get()
-            reviews[idx] = review
+        self.active_project = project
+        self._emit_status(
+            f"✅ Projekt erstellt: {plan['project_title']} ({len(subtask_ids)} Subtasks)"
+        )
+        return project
 
-        return [reviews.get(i, {"approved": False, "error": "Thread timeout"}) for i in group]
+    # ── Phase 3: Execute Subtasks ────────────────────────────
 
-    def _execute_single_subtask(self, idx: int, on_tool_start=None, on_tool_result=None) -> dict:
-        """Führt einen einzelnen Subtask aus (interner Aufruf)."""
+    def _execute_single_subtask(
+        self, idx: int, on_tool_start=None, on_tool_result=None
+    ) -> dict:
+        """Führt einen einzelnen Subtask aus (mit Retry-Logik)."""
         if not self.active_project:
             return {"approved": False, "error": "No active project"}
 
@@ -228,12 +243,20 @@ class ProjectManager:
         subtask_id = proj["subtask_ids"][idx]
         plan_subtask = proj["plan"]["subtasks"][idx]
 
-        self._emit_status(f"🔧 Subtask {idx+1}/{len(proj['subtask_ids'])}: {plan_subtask['title']}")
+        self._emit_status(
+            f"🔧 Subtask {idx+1}/{len(proj['subtask_ids'])}: {plan_subtask['title']}"
+        )
         if self.on_subtask_start:
             self.on_subtask_start(idx, plan_subtask)
 
+        # Prüfe ob Task noch existiert (könnte gelöscht worden sein)
+        if not self.tasks.get_task_by_id(subtask_id):
+            log.warning(f"Subtask [{subtask_id}] wurde gelöscht — überspringe")
+            return {"approved": False, "error": "Task deleted"}
+
         self.tasks.update_status(subtask_id, "active")
 
+        # Kontext aus vorherigen Reviews
         previous_notes = ""
         for prev_id, review in proj["reviews"].items():
             if review.get("notes"):
@@ -268,8 +291,8 @@ Do NOT ask questions. Focus only on THIS subtask.
                     on_tool_start=on_tool_start,
                     on_tool_result=on_tool_result,
                     max_iterations=10,
-                    depth=3,  # depth=3: kein auto DeepThink Review
-                    isolated=True
+                    depth=3,
+                    isolated=True,
                 )
 
                 proj["results"][subtask_id] = response
@@ -288,7 +311,9 @@ Do NOT ask questions. Focus only on THIS subtask.
                     feedback = review.get("feedback", "No specific feedback")
                     if retries > self.MAX_RETRIES_PER_SUBTASK:
                         self.tasks.fail_task(subtask_id)
-                        self._emit_status(f"❌ Subtask {idx+1} failed after {retries} attempts")
+                        self._emit_status(
+                            f"❌ Subtask {idx+1} failed after {retries} attempts"
+                        )
                         if self.on_subtask_done:
                             self.on_subtask_done(idx, "failed", review)
                         proj["current_index"] = max(proj["current_index"], idx + 1)
@@ -305,214 +330,88 @@ Do NOT ask questions. Focus only on THIS subtask.
 
         return {"approved": False, "error": "Max retries exceeded"}
 
-    def _emit_status(self, msg: str):
-        log.info(f"[PM] {msg}")
-        if self.on_status:
-            self.on_status(msg)
+    def _execute_subtask_thread(
+        self, idx: int, result_queue: queue.Queue,
+        on_tool_start=None, on_tool_result=None,
+    ):
+        """Thread-Wrapper für parallele Subtask-Execution."""
+        try:
+            review = self._execute_single_subtask(idx, on_tool_start, on_tool_result)
+            result_queue.put((idx, review))
+        except Exception as e:
+            result_queue.put((idx, {"approved": False, "error": str(e)}))
 
-    def _emit_thought(self, msg: str):
-        log.info(f"[PM] 💭 {msg}")
-        if self.on_thought:
-            self.on_thought(msg)
+    def _identify_parallel_groups(self, subtasks: list) -> list:
+        """Topological Sort — gruppiert Subtasks nach Abhängigkeiten."""
+        n = len(subtasks)
+        groups = []
+        completed = set()
+        remaining = list(range(n))
 
-    # ── Phase 1: Decompose ───────────────────────────────────
-
-    def decompose(self, user_prompt: str, codebase_context: str = "") -> Optional[dict]:
-        """DeepThink zerlegt den User-Prompt in Subtasks."""
-        self._emit_status("🧠 DeepThink: Analyzing project...")
-
-        if not self.deepthink.is_enabled():
-            # Fallback: Brain selbst zerlegen lassen
-            self._emit_thought("DeepThink nicht aktiv — verwende Brain für Decompose")
-            raw = self.brain.think(
-                DECOMPOSE_PROMPT.format(
-                    user_prompt=user_prompt,
-                    codebase_context=codebase_context or "No additional context."
-                ),
-                isolated=True
-            )
-        else:
-            raw = self.deepthink.think(
-                DECOMPOSE_PROMPT.format(
-                    user_prompt=user_prompt,
-                    codebase_context=codebase_context or "No additional context."
-                )
-            )
-
-        # Parse JSON
-        plan = self._parse_json(raw)
-        if not plan or "subtasks" not in plan:
-            log.error(f"Decompose failed. Raw: {raw[:500]}")
-            self._emit_thought("❌ Konnte Projekt nicht zerlegen — ungültiges JSON")
-            return None
-
-        subtasks = plan["subtasks"]
-        if not subtasks:
-            self._emit_thought("❌ Keine Subtasks generiert")
-            return None
-
-        self._emit_status(f"📋 Projekt zerlegt: {len(subtasks)} Subtasks")
-        for i, st in enumerate(subtasks, 1):
-            self._emit_thought(f"  [{i}] {st['title']}")
-
-        return plan
-
-    # ── Phase 2: Create Tasks ────────────────────────────────
-
-    def create_project_tasks(self, plan: dict) -> dict:
-        """Erstellt Parent-Task + Subtasks im TaskManager."""
-        # Parent Task
-        parent = self.tasks.add_task(
-            title=f"🏗 {plan['project_title']}",
-            description=plan.get("project_summary", ""),
-            priority="high"
-        )
-        parent_id = parent["id"]
-
-        # Subtasks erstellen
-        subtask_ids = []
-        for i, st in enumerate(plan["subtasks"]):
-            sub = self.tasks.add_task(
-                title=f"[{i+1}/{len(plan['subtasks'])}] {st['title']}",
-                description=st.get("description", ""),
-                priority=st.get("priority", "normal"),
-                parent_id=parent_id
-            )
-            subtask_ids.append(sub["id"])
-
-            # Subtask-ID im Parent tracken
-            self.tasks.add_subtask_id(parent_id, sub["id"])
-
-        project = {
-            "plan": plan,
-            "parent_id": parent_id,
-            "subtask_ids": subtask_ids,
-            "results": {},          # subtask_id -> execution result
-            "reviews": {},          # subtask_id -> review result
-            "current_index": 0,
-            "status": "ready"       # ready, running, reviewing, completed, failed
-        }
-
-        self.active_project = project
-        self._emit_status(f"✅ Projekt erstellt: {plan['project_title']} ({len(subtask_ids)} Subtasks)")
-        return project
-
-    # ── Phase 3: Execute Subtasks ────────────────────────────
-
-    def execute_next_subtask(self, on_tool_start=None, on_tool_result=None) -> Optional[dict]:
-        """Führt den nächsten Subtask aus. Gibt Review-Result zurück."""
-        if not self.active_project:
-            return None
-
-        proj = self.active_project
-        idx = proj["current_index"]
-
-        if idx >= len(proj["subtask_ids"]):
-            self._emit_status("Alle Subtasks abgearbeitet")
-            return None
-
-        subtask_id = proj["subtask_ids"][idx]
-        plan_subtask = proj["plan"]["subtasks"][idx]
-
-        self._emit_status(f"🔧 Subtask {idx+1}/{len(proj['subtask_ids'])}: {plan_subtask['title']}")
-        if self.on_subtask_start:
-            self.on_subtask_start(idx, plan_subtask)
-
-        # Task als active markieren
-        self.tasks.update_status(subtask_id, "active")
-
-        # Kontext für den Small Model zusammenbauen
-        previous_notes = ""
-        for prev_id, review in proj["reviews"].items():
-            if review.get("notes"):
-                previous_notes += f"- {review['notes']}\n"
-
-        context = f"""PROJECT MODE - Working on subtask {idx+1}/{len(proj['subtask_ids'])}.
-
-Project: {proj['plan']['project_title']}
-Project Summary: {proj['plan'].get('project_summary', '')}
-
-Current Subtask: {plan_subtask['title']}
-Description: {plan_subtask.get('description', '')}
-Done Criteria: {plan_subtask.get('done_criteria', 'Complete the subtask as described')}
-Files Involved: {', '.join(plan_subtask.get('files_involved', []))}
-
-{f'Notes from previous reviews:{chr(10)}{previous_notes}' if previous_notes else ''}
-
-INSTRUCTIONS:
-- Complete this subtask FULLY. Use tools (terminal, read_file, write_file, self_edit).
-- Follow the done criteria exactly.
-- When done, explain what you did and what files were changed.
-- Do NOT work on other subtasks. Focus only on THIS one.
-- Do NOT ask questions. Just work.
-"""
-
-        retries = 0
-        while retries <= self.MAX_RETRIES_PER_SUBTASK:
-            try:
-                # Small Model arbeitet
-                response = self.brain.think(
-                    f"[PROJECT] Execute subtask: {plan_subtask['title']}",
-                    extra_context=context,
-                    on_tool_start=on_tool_start,
-                    on_tool_result=on_tool_result,
-                    max_iterations=10,
-                    depth=3,  # depth=3: kein auto DeepThink Review
-                    isolated=True
-                )
-
-                self._emit_thought(f"🤖 Subtask result: {response[:300]}")
-                proj["results"][subtask_id] = response
-
-                # DeepThink Review
-                review = self._review_subtask(plan_subtask, response)
-                proj["reviews"][subtask_id] = review
-
-                if review.get("approved", False):
-                    # Approved → weiter
-                    self.tasks.complete_task(subtask_id)
-                    self._emit_status(f"✅ Subtask {idx+1} approved (confidence: {review.get('confidence', '?')})")
-                    if self.on_subtask_done:
-                        self.on_subtask_done(idx, "approved", review)
-                    proj["current_index"] = idx + 1
-                    return review
+        for _ in range(n):
+            if not remaining:
+                break
+            ready = []
+            still_waiting = []
+            for idx in remaining:
+                deps = subtasks[idx].get("depends_on", [])
+                if all(d in completed for d in deps):
+                    ready.append(idx)
                 else:
-                    # Rejected → retry mit Feedback
-                    retries += 1
-                    feedback = review.get("feedback", "No specific feedback")
-                    issues = review.get("issues", [])
-                    self._emit_thought(f"🔄 Subtask {idx+1} rejected (attempt {retries}): {feedback}")
+                    still_waiting.append(idx)
 
-                    if retries > self.MAX_RETRIES_PER_SUBTASK:
-                        # Max retries erreicht → fail und weiter
-                        self.tasks.fail_task(subtask_id)
-                        self._emit_status(f"❌ Subtask {idx+1} failed after {retries} attempts")
-                        if self.on_subtask_done:
-                            self.on_subtask_done(idx, "failed", review)
-                        proj["current_index"] = idx + 1
-                        return review
+            if not ready:
+                log.warning(
+                    f"Circular dependency detected, running {still_waiting} sequentially"
+                )
+                for i in still_waiting:
+                    groups.append([i])
+                break
 
-                    # Feedback in den Kontext einbauen für Retry
-                    context += f"""
+            # Max 3 parallel (API Load)
+            for batch_start in range(0, len(ready), 3):
+                groups.append(ready[batch_start : batch_start + 3])
+            for idx in ready:
+                completed.add(idx)
+            remaining = still_waiting
 
-REVISION REQUIRED (Attempt {retries + 1}):
-The reviewer found issues with your previous attempt:
-Issues: {', '.join(issues) if issues else 'See feedback'}
-Feedback: {feedback}
+        return groups
 
-Fix these issues and try again. Focus on the specific problems mentioned.
-"""
+    def execute_parallel_group(
+        self, group: list, on_tool_start=None, on_tool_result=None
+    ) -> list:
+        """Führt eine Gruppe von Subtasks parallel aus."""
+        if len(group) == 1:
+            review = self._execute_single_subtask(
+                group[0], on_tool_start, on_tool_result
+            )
+            return [review]
 
-            except Exception as e:
-                log.error(f"Subtask execution error: {e}", exc_info=True)
-                retries += 1
-                if retries > self.MAX_RETRIES_PER_SUBTASK:
-                    self.tasks.fail_task(subtask_id)
-                    self._emit_status(f"❌ Subtask {idx+1} error: {str(e)[:100]}")
-                    proj["current_index"] = idx + 1
-                    return {"approved": False, "error": str(e)}
+        self._emit_status(f"⚡ Parallel: {len(group)} Subtasks gleichzeitig...")
+        result_queue = queue.Queue()
+        threads = []
 
-        return None
+        for idx in group:
+            t = threading.Thread(
+                target=self._execute_subtask_thread,
+                args=(idx, result_queue, on_tool_start, on_tool_result),
+                daemon=True,
+            )
+            t.start()
+            threads.append(t)
+
+        for t in threads:
+            t.join(timeout=300)
+
+        reviews = {}
+        while not result_queue.empty():
+            idx, review = result_queue.get()
+            reviews[idx] = review
+
+        return [
+            reviews.get(i, {"approved": False, "error": "Thread timeout"})
+            for i in group
+        ]
 
     def _review_subtask(self, plan_subtask: dict, execution_result: str) -> dict:
         """DeepThink reviewed einen Subtask."""
@@ -527,18 +426,26 @@ Fix these issues and try again. Focus on the specific problems mentioned.
             subtask_title=plan_subtask["title"],
             subtask_description=plan_subtask.get("description", ""),
             done_criteria=plan_subtask.get("done_criteria", "N/A"),
-            execution_result=execution_result[:4000]  # Limit context
+            execution_result=execution_result[:4000],
         )
 
-        if self.deepthink.is_enabled():
+        if self.deepthink and self.deepthink.is_enabled():
             raw = self.deepthink.think(prompt)
         else:
             raw = self.brain.think(prompt, isolated=True)
 
         result = self._parse_json(raw)
         if not result:
-            log.warning(f"Subtask review parse failed, defaulting to approved. Raw: {raw[:300]}")
-            return {"approved": True, "confidence": 0.5, "issues": [], "feedback": "", "notes": ""}
+            log.warning(
+                f"Subtask review parse failed, defaulting to approved. Raw: {(raw or '')[:300]}"
+            )
+            return {
+                "approved": True,
+                "confidence": 0.5,
+                "issues": [],
+                "feedback": "",
+                "notes": "",
+            }
 
         return result
 
@@ -552,7 +459,6 @@ Fix these issues and try again. Focus on the specific problems mentioned.
         proj = self.active_project
         self._emit_status("🧠 DeepThink: Final project review...")
 
-        # Alle Results zusammenfassen
         all_results = []
         for i, subtask_id in enumerate(proj["subtask_ids"]):
             plan_st = proj["plan"]["subtasks"][i]
@@ -569,25 +475,33 @@ Fix these issues and try again. Focus on the specific problems mentioned.
         prompt = FINAL_REVIEW_PROMPT.format(
             project_title=proj["plan"]["project_title"],
             project_summary=proj["plan"].get("project_summary", ""),
-            all_results="\n".join(all_results)
+            all_results="\n".join(all_results),
         )
 
-        if self.deepthink.is_enabled():
+        if self.deepthink and self.deepthink.is_enabled():
             raw = self.deepthink.think(prompt)
         else:
             raw = self.brain.think(prompt, isolated=True)
 
         result = self._parse_json(raw)
         if not result:
-            log.warning(f"Final review parse failed. Raw: {raw[:500]}")
-            result = {"approved": True, "confidence": 0.5, "final_verdict": "Parse error — defaulting to approve"}
+            log.warning(f"Final review parse failed. Raw: {(raw or '')[:500]}")
+            result = {
+                "approved": True,
+                "confidence": 0.5,
+                "final_verdict": "Parse error — defaulting to approve",
+            }
 
         # Parent Task Status setzen
         if result.get("approved", False):
             self.tasks.complete_task(proj["parent_id"])
-            self._emit_status(f"🎉 Projekt abgeschlossen: {proj['plan']['project_title']}")
+            self._emit_status(
+                f"🎉 Projekt abgeschlossen: {proj['plan']['project_title']}"
+            )
         else:
-            self._emit_status(f"⚠ Projekt needs fixes: {result.get('final_verdict', 'Unknown')}")
+            self._emit_status(
+                f"⚠ Projekt needs fixes: {result.get('final_verdict', 'Unknown')}"
+            )
 
         if self.on_project_done:
             self.on_project_done(result)
@@ -596,11 +510,14 @@ Fix these issues and try again. Focus on the specific problems mentioned.
 
     # ── Full Pipeline ────────────────────────────────────────
 
-    def run_project(self, user_prompt: str, codebase_context: str = "",
-                    on_tool_start=None, on_tool_result=None) -> dict:
-        """Führt das komplette Projekt-Pipeline aus.
-        Wird vom AutonomyLoop im Project-Mode aufgerufen.
-        """
+    def run_project(
+        self,
+        user_prompt: str,
+        codebase_context: str = "",
+        on_tool_start=None,
+        on_tool_result=None,
+    ) -> dict:
+        """Führt das komplette Projekt-Pipeline aus."""
         self.is_running = True
 
         try:
@@ -629,6 +546,12 @@ Fix these issues and try again. Focus on the specific problems mentioned.
                     self._emit_status("⏸ Projekt pausiert")
                     return {"success": False, "error": "Project paused"}
 
+                # Prüfe ob Parent-Task noch existiert
+                if not self.tasks.get_task_by_id(project["parent_id"]):
+                    log.warning("Parent task deleted — aborting project")
+                    self.is_running = False
+                    return {"success": False, "error": "Project deleted"}
+
                 if len(group) > 1:
                     titles = [subtasks[i]["title"][:30] for i in group]
                     self._emit_status(
@@ -642,9 +565,7 @@ Fix these issues and try again. Focus on the specific problems mentioned.
                     )
 
                 self.execute_parallel_group(
-                    group,
-                    on_tool_start=on_tool_start,
-                    on_tool_result=on_tool_result
+                    group, on_tool_start=on_tool_start, on_tool_result=on_tool_result
                 )
                 time.sleep(0.3)
 
@@ -655,11 +576,24 @@ Fix these issues and try again. Focus on the specific problems mentioned.
             project["status"] = "completed" if final.get("approved") else "needs_fixes"
             self.active_project = project
 
+            # Phase 5: Reflector Learning (NEU)
+            if self.reflector:
+                try:
+                    subtask_reviews = list(project["reviews"].values())
+                    self.reflector.reflect_on_project(
+                        project_title=plan["project_title"],
+                        subtask_results=subtask_reviews,
+                        final_approved=final.get("approved", False),
+                        final_verdict=final.get("final_verdict", ""),
+                    )
+                except Exception as e:
+                    log.warning(f"Project reflection failed: {e}")
+
             self.is_running = False
             return {
                 "success": final.get("approved", False),
                 "project": project,
-                "final_review": final
+                "final_review": final,
             }
 
         except Exception as e:
@@ -668,30 +602,30 @@ Fix these issues and try again. Focus on the specific problems mentioned.
             return {"success": False, "error": str(e)}
 
     def stop(self):
-        """Stoppt das laufende Projekt."""
         self.is_running = False
         self._emit_status("⏹ Projekt gestoppt")
 
     # ── Helpers ──────────────────────────────────────────────
 
     def _parse_json(self, raw: str) -> Optional[dict]:
-        """Robust JSON parsing mit Cleanup."""
         import re
+
         if not raw:
             return None
 
-        # <think>...</think> entfernen
-        cleaned = re.sub(r'<think>.*?</think>', '', raw, flags=re.DOTALL).strip()
+        cleaned = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
 
-        # Markdown-Backticks entfernen
-        cleaned = cleaned.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        cleaned = (
+            cleaned.removeprefix("```json")
+            .removeprefix("```")
+            .removesuffix("```")
+            .strip()
+        )
 
-        # JSON-Block extrahieren
-        json_match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+        json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
         if json_match:
             cleaned = json_match.group(0)
 
-        # Abgeschnittenes JSON reparieren
         if cleaned and not cleaned.endswith("}"):
             cleaned = cleaned.rstrip(",") + "\n}"
 
@@ -702,7 +636,6 @@ Fix these issues and try again. Focus on the specific problems mentioned.
             return None
 
     def get_project_status(self) -> dict:
-        """Gibt den aktuellen Projekt-Status für die UI."""
         if not self.active_project:
             return {"active": False}
 
@@ -721,5 +654,5 @@ Fix these issues and try again. Focus on the specific problems mentioned.
             "approved": approved,
             "failed": failed,
             "progress": done / total if total > 0 else 0,
-            "parent_id": proj["parent_id"]
+            "parent_id": proj["parent_id"],
         }

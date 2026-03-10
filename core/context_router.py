@@ -23,43 +23,139 @@ SUMMARY_PATH = DATA_DIR / "conversation_summary.json"
 # ═══════════════════════════════════════════════
 
 SMALLTALK_PATTERNS = [
-    r'^(hi|hey|hallo|moin|servus|yo|sup|na)\s*[!?.]*$',
-    r'^(guten\s*(morgen|abend|tag)|good\s*(morning|evening))\s*[!?.]*$',
-    r'^wie\s*geht\s*(es\s*)?(dir|s)\s*[?!.]*$',
-    r'^(how\s*are\s*you|what\'?s?\s*up)\s*[?!.]*$',
-    r'^(danke|thanks|thx|ok|okay|cool|nice|gut|super|alles\s*klar)\s*[!?.]*$',
-    r'^(bye|tschüss|ciao|see\s*ya)\s*[!?.]*$',
-    r'^(ja|nein|yes|no|yep|nope|klar|sicher)\s*[!?.]*$',
+    r"^(hi|hey|hallo|moin|servus|yo|sup|na)\s*[!?.]*$",
+    r"^(guten\s*(morgen|abend|tag)|good\s*(morning|evening))\s*[!?.]*$",
+    r"^wie\s*geht\s*(es\s*)?(dir|s)\s*[?!.]*$",
+    r"^(how\s*are\s*you|what\'?s?\s*up)\s*[?!.]*$",
+    r"^(danke|thanks|thx|ok|okay|cool|nice|gut|super|alles\s*klar)\s*[!?.]*$",
+    r"^(bye|tschüss|ciao|see\s*ya)\s*[!?.]*$",
+    r"^(ja|nein|yes|no|yep|nope|klar|sicher)\s*[!?.]*$",
 ]
 
 ACTION_KEYWORDS = [
-    'erstell', 'create', 'bau', 'build', 'mach', 'make', 'schreib', 'write',
-    'install', 'deploy', 'starte', 'start', 'run', 'ausführ', 'execute',
-    'lösch', 'delete', 'entfern', 'remove', 'fix', 'reparier', 'debug',
-    'ändere', 'change', 'update', 'modif', 'edit', 'programmier', 'code',
-    'implementier', 'develop', 'konfigur', 'config', 'setup',
-    'suche', 'search', 'find', 'finde', 'lookup', 'research', 'analysier',
-    'zeig', 'show', 'liste', 'list', 'vergleich', 'compare', 'prüf', 'check',
-    'lade', 'download', 'öffne', 'open', 'lese', 'read', 'scrap',
+    "erstell",
+    "create",
+    "bau",
+    "build",
+    "mach",
+    "make",
+    "schreib",
+    "write",
+    "install",
+    "deploy",
+    "starte",
+    "start",
+    "run",
+    "ausführ",
+    "execute",
+    "lösch",
+    "delete",
+    "entfern",
+    "remove",
+    "fix",
+    "reparier",
+    "debug",
+    "ändere",
+    "change",
+    "update",
+    "modif",
+    "edit",
+    "programmier",
+    "code",
+    "implementier",
+    "develop",
+    "konfigur",
+    "config",
+    "setup",
+    "suche",
+    "search",
+    "find",
+    "finde",
+    "lookup",
+    "research",
+    "analysier",
+    "zeig",
+    "show",
+    "liste",
+    "list",
+    "vergleich",
+    "compare",
+    "prüf",
+    "check",
+    "lade",
+    "download",
+    "öffne",
+    "open",
+    "lese",
+    "read",
+    "scrap",
 ]
 
 DEV_KEYWORDS = [
-    'python', 'javascript', 'html', 'css', 'react', 'api', 'server',
-    'function', 'class', 'import', 'bug', 'error', 'traceback', 'exception',
-    'git', 'commit', 'docker', 'database', 'sql', 'script', 'code',
-    'file', 'datei', 'ordner', 'folder', 'path', 'terminal', 'bash',
-    'pip', 'npm', 'package', 'module', 'library',
+    "python",
+    "javascript",
+    "html",
+    "css",
+    "react",
+    "api",
+    "server",
+    "function",
+    "class",
+    "import",
+    "bug",
+    "error",
+    "traceback",
+    "exception",
+    "git",
+    "commit",
+    "docker",
+    "database",
+    "sql",
+    "script",
+    "code",
+    "file",
+    "datei",
+    "ordner",
+    "folder",
+    "path",
+    "terminal",
+    "bash",
+    "pip",
+    "npm",
+    "package",
+    "module",
+    "library",
 ]
 
 RECALL_KEYWORDS = [
-    'erinnerst', 'remember', 'weisst', 'know', 'was war', 'what was',
-    'letzte', 'last', 'vorher', 'before', 'gestern', 'yesterday',
-    'mein name', 'my name', 'über mich', 'about me',
+    "erinnerst",
+    "remember",
+    "weisst",
+    "know",
+    "was war",
+    "what was",
+    "letzte",
+    "last",
+    "vorher",
+    "before",
+    "gestern",
+    "yesterday",
+    "mein name",
+    "my name",
+    "über mich",
+    "about me",
 ]
 
 SELF_KEYWORDS = [
-    'self_edit', 'architecture', 'dein code', 'your code', 'verbessere dich',
-    'improve yourself', 'änder dich', 'modify yourself', 'self-improvement',
+    "self_edit",
+    "architecture",
+    "dein code",
+    "your code",
+    "verbessere dich",
+    "improve yourself",
+    "änder dich",
+    "modify yourself",
+    "self-improvement",
 ]
 
 
@@ -90,62 +186,151 @@ class ContextRouter:
         self.message_count += 1
 
         if has_attachments:
-            return self._make_result("task", self.DEPTH_TASK,
-                                     memory=True, tasks=False, reflections=False, state=True)
+            return self._make_result(
+                "task",
+                self.DEPTH_TASK,
+                memory=True,
+                tasks=False,
+                reflections=False,
+                state=True,
+            )
 
         if self._is_smalltalk(msg_lower):
             log.info(f"Classified as SMALLTALK: '{msg_lower[:40]}'")
-            return self._make_result("smalltalk", self.DEPTH_MINIMAL,
-                                     memory=False, tasks=False, reflections=False, state=False,
-                                     max_tokens=150, temperature=0.5)
+            return self._make_result(
+                "smalltalk",
+                self.DEPTH_MINIMAL,
+                memory=False,
+                tasks=False,
+                reflections=False,
+                state=False,
+                max_tokens=150,
+                temperature=0.5,
+            )
 
         if self._has_keywords(msg_lower, SELF_KEYWORDS):
             log.info(f"Classified as SELF_EDIT: '{msg_lower[:40]}'")
-            return self._make_result("self_edit", self.DEPTH_DEV,
-                                     memory=True, tasks=True, reflections=True, state=True)
+            return self._make_result(
+                "self_edit",
+                self.DEPTH_DEV,
+                memory=True,
+                tasks=True,
+                reflections=True,
+                state=True,
+            )
 
         if self._has_keywords(msg_lower, RECALL_KEYWORDS):
             log.info(f"Classified as RECALL: '{msg_lower[:40]}'")
-            return self._make_result("recall", self.DEPTH_QUESTION,
-                                     memory=True, tasks=False, reflections=False, state=True,
-                                     max_tokens=500)
+            return self._make_result(
+                "recall",
+                self.DEPTH_QUESTION,
+                memory=True,
+                tasks=False,
+                reflections=False,
+                state=True,
+                max_tokens=500,
+            )
 
-        if self._has_keywords(msg_lower, DEV_KEYWORDS) and self._has_keywords(msg_lower, ACTION_KEYWORDS):
+        if self._has_keywords(msg_lower, DEV_KEYWORDS) and self._has_keywords(
+            msg_lower, ACTION_KEYWORDS
+        ):
             log.info(f"Classified as DEV: '{msg_lower[:40]}'")
-            return self._make_result("dev", self.DEPTH_DEV,
-                                     memory=True, tasks=True, reflections=True, state=True)
+            return self._make_result(
+                "dev",
+                self.DEPTH_DEV,
+                memory=True,
+                tasks=True,
+                reflections=True,
+                state=True,
+            )
 
         if self._has_keywords(msg_lower, ACTION_KEYWORDS):
             log.info(f"Classified as TASK: '{msg_lower[:40]}'")
-            return self._make_result("task", self.DEPTH_TASK,
-                                     memory=True, tasks=True, reflections=False, state=True)
+            return self._make_result(
+                "task",
+                self.DEPTH_TASK,
+                memory=True,
+                tasks=True,
+                reflections=False,
+                state=True,
+            )
 
         if self._has_keywords(msg_lower, DEV_KEYWORDS):
             log.info(f"Classified as DEV-QUESTION: '{msg_lower[:40]}'")
-            return self._make_result("question", self.DEPTH_QUESTION,
-                                     memory=True, tasks=False, reflections=False, state=False,
-                                     max_tokens=1000)
+            return self._make_result(
+                "question",
+                self.DEPTH_QUESTION,
+                memory=True,
+                tasks=False,
+                reflections=False,
+                state=False,
+                max_tokens=1000,
+            )
 
-        if msg_lower.endswith('?') or msg_lower.startswith(('was ', 'wie ', 'wo ', 'wer ',
-            'warum ', 'wann ', 'what ', 'how ', 'where ', 'who ', 'why ', 'when ',
-            'kannst ', 'can ', 'ist ', 'is ', 'hat ', 'has ')):
+        if msg_lower.endswith("?") or msg_lower.startswith(
+            (
+                "was ",
+                "wie ",
+                "wo ",
+                "wer ",
+                "warum ",
+                "wann ",
+                "what ",
+                "how ",
+                "where ",
+                "who ",
+                "why ",
+                "when ",
+                "kannst ",
+                "can ",
+                "ist ",
+                "is ",
+                "hat ",
+                "has ",
+            )
+        ):
             log.info(f"Classified as QUESTION: '{msg_lower[:40]}'")
-            return self._make_result("question", self.DEPTH_QUESTION,
-                                     memory=True, tasks=False, reflections=False, state=False,
-                                     max_tokens=1000)
+            return self._make_result(
+                "question",
+                self.DEPTH_QUESTION,
+                memory=True,
+                tasks=False,
+                reflections=False,
+                state=False,
+                max_tokens=1000,
+            )
 
         if len(message) > 100:
             log.info(f"Classified as TASK (long message): '{msg_lower[:40]}'")
-            return self._make_result("task", self.DEPTH_TASK,
-                                     memory=True, tasks=True, reflections=False, state=True)
+            return self._make_result(
+                "task",
+                self.DEPTH_TASK,
+                memory=True,
+                tasks=True,
+                reflections=False,
+                state=True,
+            )
 
         log.info(f"Classified as QUESTION (default): '{msg_lower[:40]}'")
-        return self._make_result("question", self.DEPTH_QUESTION,
-                                 memory=True, tasks=False, reflections=False, state=False,
-                                 max_tokens=800)
+        return self._make_result(
+            "question",
+            self.DEPTH_QUESTION,
+            memory=True,
+            tasks=False,
+            reflections=False,
+            state=False,
+            max_tokens=800,
+        )
 
-    def build_context(self, classification: dict, state=None, memory=None,
-                      tasks=None, reflector=None, query: str = "") -> str:
+    def build_context(
+        self,
+        classification: dict,
+        state=None,
+        memory=None,
+        tasks=None,
+        reflector=None,
+        query: str = "",
+    ) -> str:
         """Baut minimalen Kontext basierend auf Classification."""
         flags = classification["context_flags"]
         parts = []
@@ -170,7 +355,9 @@ class ContextRouter:
 
         context = "\n".join(parts)
         actual = len(context.split())
-        log.info(f"Context: ~{actual} words sent ({classification['intent']}, depth={classification['depth']})")
+        log.info(
+            f"Context: ~{actual} words sent ({classification['intent']}, depth={classification['depth']})"
+        )
         return context
 
     # ── Helpers ───────────────────────────────────────────────
@@ -186,10 +373,17 @@ class ContextRouter:
     def _has_keywords(self, msg: str, keywords: list) -> bool:
         return any(kw in msg for kw in keywords)
 
-    def _make_result(self, intent: str, depth: int, memory: bool = False,
-                     tasks: bool = False, reflections: bool = False,
-                     state: bool = False, max_tokens: int = 4096,
-                     temperature: float = 0.7) -> dict:
+    def _make_result(
+        self,
+        intent: str,
+        depth: int,
+        memory: bool = False,
+        tasks: bool = False,
+        reflections: bool = False,
+        state: bool = False,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> dict:
         return {
             "intent": intent,
             "depth": depth,
@@ -197,16 +391,17 @@ class ContextRouter:
                 "memory": memory,
                 "tasks": tasks,
                 "reflections": reflections,
-                "state": state
+                "state": state,
             },
             "max_tokens": max_tokens,
-            "temperature": temperature
+            "temperature": temperature,
         }
 
 
 # ═══════════════════════════════════════════════
 # History Compressor
 # ═══════════════════════════════════════════════
+
 
 class HistoryCompressor:
     """Komprimiert Chat-History um Tokens zu sparen."""
@@ -251,8 +446,8 @@ class HistoryCompressor:
         if len(history) <= self.KEEP_RECENT:
             return history
 
-        old_messages = history[:-self.KEEP_RECENT]
-        recent = history[-self.KEEP_RECENT:]
+        old_messages = history[: -self.KEEP_RECENT]
+        recent = history[-self.KEEP_RECENT :]
 
         topics = set()
         tools_used = set()
@@ -265,8 +460,18 @@ class HistoryCompressor:
             if role == "user":
                 words = content.lower().split()
                 for w in words:
-                    if len(w) > 4 and w not in ('nicht', 'diese', 'einen', 'meine', 'werden',
-                                                  'about', 'there', 'would', 'could', 'should'):
+                    if len(w) > 4 and w not in (
+                        "nicht",
+                        "diese",
+                        "einen",
+                        "meine",
+                        "werden",
+                        "about",
+                        "there",
+                        "would",
+                        "could",
+                        "should",
+                    ):
                         topics.add(w)
 
             if "<tool_call>" in content:
@@ -275,7 +480,7 @@ class HistoryCompressor:
                 tools_used.update(tools)
 
             if role == "assistant" and len(content) > 50:
-                first_line = content.split('\n')[0][:100]
+                first_line = content.split("\n")[0][:100]
                 actions.append(first_line)
 
         summary = {
@@ -291,15 +496,23 @@ class HistoryCompressor:
 
         summary_text = self._format_summary(summary)
         compressed = [
-            {"role": "user", "content": f"[Previous conversation summary: {summary_text}]"},
-            {"role": "assistant", "content": "Understood, I have context from our previous conversation."}
+            {
+                "role": "user",
+                "content": f"[Previous conversation summary: {summary_text}]",
+            },
+            {
+                "role": "assistant",
+                "content": "Understood, I have context from our previous conversation.",
+            },
         ]
         compressed.extend(recent)
 
         old_tokens = sum(len(str(m.get("content", "")).split()) for m in history)
         new_tokens = sum(len(str(m.get("content", "")).split()) for m in compressed)
-        log.info(f"History compressed: {len(history)} → {len(compressed)} messages, "
-                 f"~{old_tokens} → ~{new_tokens} words")
+        log.info(
+            f"History compressed: {len(history)} → {len(compressed)} messages, "
+            f"~{old_tokens} → ~{new_tokens} words"
+        )
 
         return compressed
 

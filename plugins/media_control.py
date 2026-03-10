@@ -9,27 +9,41 @@ import shutil
 import os
 import re
 
+
 def _run(cmd_list, timeout=5):
     try:
-        r = subprocess.run(cmd_list, shell=False, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(
+            cmd_list, shell=False, capture_output=True, text=True, timeout=timeout
+        )
         return r.stdout.strip(), r.returncode == 0
     except Exception as e:
         return str(e), False
 
+
 def execute(params):
     action = params.get("action", "get_volume")
-    value  = params.get("value", None)
+    value = params.get("value", None)
 
     os.environ.setdefault("DISPLAY", ":0")
 
     try:
         # === Playback controls via playerctl ===
-        if action in ("play", "pause", "play-pause", "stop", "next", "prev", "previous"):
-            if action == "prev": action = "previous"
+        if action in (
+            "play",
+            "pause",
+            "play-pause",
+            "stop",
+            "next",
+            "prev",
+            "previous",
+        ):
+            if action == "prev":
+                action = "previous"
             if shutil.which("playerctl"):
                 out, ok = _run(["playerctl", action])
-                if ok: return {"success": True, "result": f"Media: {action}"}
-            
+                if ok:
+                    return {"success": True, "result": f"Media: {action}"}
+
             # Fallback: xdotool key
             key_map = {
                 "play-pause": "XF86AudioPlay",
@@ -37,7 +51,7 @@ def execute(params):
                 "pause": "XF86AudioPause",
                 "stop": "XF86AudioStop",
                 "next": "XF86AudioNext",
-                "previous": "XF86AudioPrev"
+                "previous": "XF86AudioPrev",
             }
             if shutil.which("xdotool") and action in key_map:
                 _run(["xdotool", "key", key_map[action]])
@@ -47,7 +61,14 @@ def execute(params):
         elif action == "status":
             if shutil.which("playerctl"):
                 status, _ = _run(["playerctl", "status"])
-                meta, _ = _run(["playerctl", "metadata", "--format", "{{playerName}}: {{title}} - {{artist}}"])
+                meta, _ = _run(
+                    [
+                        "playerctl",
+                        "metadata",
+                        "--format",
+                        "{{playerName}}: {{title}} - {{artist}}",
+                    ]
+                )
                 return {"success": True, "result": f"Status: {status}\n{meta}"}
             return {"success": True, "result": "No active media player"}
 
@@ -55,11 +76,14 @@ def execute(params):
         elif action == "get_volume":
             vol_out, ok = _run(["pactl", "get-sink-volume", "@DEFAULT_SINK@"])
             if ok:
-                m = re.search(r'([0-9]+)%', vol_out)
+                m = re.search(r"([0-9]+)%", vol_out)
                 if m:
                     mute_out, _ = _run(["pactl", "get-sink-mute", "@DEFAULT_SINK@"])
                     mute_str = " 🔇 MUTED" if "yes" in mute_out.lower() else ""
-                    return {"success": True, "result": f"Volume: {m.group(1)}%{mute_str}"}
+                    return {
+                        "success": True,
+                        "result": f"Volume: {m.group(1)}%{mute_str}",
+                    }
             return {"success": False, "result": "Cannot get volume"}
 
         elif action == "volume_up":
@@ -73,7 +97,8 @@ def execute(params):
             return {"success": True, "result": f"Volume decreased"}
 
         elif action == "set_volume":
-            if value is None: return {"success": False, "result": "Need 'value' (0-150)"}
+            if value is None:
+                return {"success": False, "result": "Need 'value' (0-150)"}
             vol = max(0, min(150, int(value)))
             _run(["pactl", "set-sink-volume", "@DEFAULT_SINK@", f"{vol}%"])
             return {"success": True, "result": f"Volume set to {vol}%"}

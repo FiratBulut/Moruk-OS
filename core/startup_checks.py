@@ -38,7 +38,7 @@ class StartupCheck:
             "ok": len(self.issues) == 0,
             "issues": self.issues,
             "warnings": self.warnings,
-            "info": self.info
+            "info": self.info,
         }
 
         for issue in self.issues:
@@ -141,13 +141,18 @@ class StartupCheck:
         """Prüft Disk-Speicher und RAM beim Start."""
         try:
             import shutil
+
             total, used, free = shutil.disk_usage("/")
-            free_gb = free / (1024 ** 3)
+            free_gb = free / (1024**3)
             used_pct = (used / total) * 100
             if used_pct > 90:
-                self.warnings.append(f"Disk fast voll: {used_pct:.0f}% genutzt ({free_gb:.1f}GB frei)")
+                self.warnings.append(
+                    f"Disk fast voll: {used_pct:.0f}% genutzt ({free_gb:.1f}GB frei)"
+                )
             else:
-                self.info.append(f"✓ Disk: {free_gb:.0f}GB frei ({used_pct:.0f}% genutzt)")
+                self.info.append(
+                    f"✓ Disk: {free_gb:.0f}GB frei ({used_pct:.0f}% genutzt)"
+                )
         except Exception as e:
             log.warning(f"Disk check failed: {e}")
 
@@ -163,9 +168,13 @@ class StartupCheck:
             avail_mb = mem.get("MemAvailable", 0) // 1024
             used_pct = ((total_mb - avail_mb) / total_mb * 100) if total_mb > 0 else 0
             if used_pct > 85:
-                self.warnings.append(f"RAM: {used_pct:.0f}% genutzt ({avail_mb}MB verfügbar)")
+                self.warnings.append(
+                    f"RAM: {used_pct:.0f}% genutzt ({avail_mb}MB verfügbar)"
+                )
             else:
-                self.info.append(f"✓ RAM: {avail_mb}MB verfügbar ({used_pct:.0f}% genutzt)")
+                self.info.append(
+                    f"✓ RAM: {avail_mb}MB verfügbar ({used_pct:.0f}% genutzt)"
+                )
         except Exception as e:
             log.warning(f"RAM check failed: {e}")
 
@@ -192,8 +201,10 @@ class StartupCheck:
 
         try:
             result = subprocess.run(
-                ["pgrep", "-fc", "python.*main.py"],
-                capture_output=True, text=True, timeout=3
+                ["pgrep", "-fc", "python3 main.py"],
+                capture_output=True,
+                text=True,
+                timeout=3,
             )
             count = int(result.stdout.strip()) if result.stdout.strip().isdigit() else 0
             if count > 1:

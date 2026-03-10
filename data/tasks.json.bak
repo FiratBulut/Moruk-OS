@@ -1,0 +1,14 @@
+[
+  {
+    "id": "c029c1ca",
+    "title": "🎯 Improve reliability of project_subtask",
+    "description": "Auto-generated goal: Tool 'project_subtask' fails >50% (6/8)",
+    "status": "completed",
+    "priority": "normal",
+    "parent_id": null,
+    "subtasks": [],
+    "created_at": "2026-03-10T19:29:01.485659",
+    "updated_at": "2026-03-10T19:29:45.391265",
+    "completed_at": "2026-03-10T19:29:45.391268"
+  }
+]

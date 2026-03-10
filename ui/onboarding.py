@@ -9,22 +9,35 @@ import subprocess
 import platform
 import psutil
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QLineEdit, QTextEdit, QStackedWidget, QWidget, QProgressBar,
-    QComboBox, QScrollArea, QFrame
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QLineEdit,
+    QTextEdit,
+    QStackedWidget,
+    QWidget,
+    QProgressBar,
+    QComboBox,
+    QScrollArea,
+    QFrame,
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QColor
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "settings.json")
-USER_PROFILE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "user_profile.json")
+USER_PROFILE_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "data", "user_profile.json"
+)
 
 
 # ── System Check Worker ───────────────────────────────────────────────────────
 
+
 class SystemCheckWorker(QThread):
     result = pyqtSignal(str, bool)  # message, success
-    done   = pyqtSignal(dict)
+    done = pyqtSignal(dict)
 
     def run(self):
         info = {}
@@ -60,6 +73,7 @@ class SystemCheckWorker(QThread):
     def _check_pyqt(self):
         try:
             from PyQt6.QtCore import QT_VERSION_STR
+
             return True, f"PyQt6 (Qt {QT_VERSION_STR})"
         except Exception:
             return False, "Nicht installiert"
@@ -67,6 +81,7 @@ class SystemCheckWorker(QThread):
     def _check_internet(self):
         try:
             import urllib.request
+
             urllib.request.urlopen("https://www.google.com", timeout=5)
             return True, "Online ✓"
         except Exception:
@@ -93,17 +108,26 @@ class SystemCheckWorker(QThread):
 
     def _check_espeak(self):
         try:
-            result = subprocess.run(["espeak-ng", "--version"],
-                                    capture_output=True, text=True, timeout=5)
-            return result.returncode == 0, "Installiert ✓" if result.returncode == 0 else "Nicht gefunden"
+            result = subprocess.run(
+                ["espeak-ng", "--version"], capture_output=True, text=True, timeout=5
+            )
+            return result.returncode == 0, (
+                "Installiert ✓" if result.returncode == 0 else "Nicht gefunden"
+            )
         except Exception:
             return False, "Nicht installiert (optional)"
 
     def _check_gpu(self):
         # Versuche GPU Info zu lesen
         try:
-            result = subprocess.run(["lspci"], capture_output=True, text=True, timeout=5)
-            lines = [l for l in result.stdout.split("\n") if "VGA" in l or "3D" in l or "Display" in l]
+            result = subprocess.run(
+                ["lspci"], capture_output=True, text=True, timeout=5
+            )
+            lines = [
+                l
+                for l in result.stdout.split("\n")
+                if "VGA" in l or "3D" in l or "Display" in l
+            ]
             if lines:
                 gpu = lines[0].split(":")[-1].strip()[:60]
                 return True, gpu
@@ -113,6 +137,7 @@ class SystemCheckWorker(QThread):
 
 
 # ── Onboarding Dialog ─────────────────────────────────────────────────────────
+
 
 class OnboardingDialog(QDialog):
     finished_signal = pyqtSignal(dict)  # settings dict wenn fertig
@@ -142,9 +167,9 @@ class OnboardingDialog(QDialog):
         self.stack = QStackedWidget()
         main.addWidget(self.stack)
 
-        self.stack.addWidget(self._page_welcome())    # 0
-        self.stack.addWidget(self._page_profile())    # 1
-        self.stack.addWidget(self._page_syscheck())   # 2
+        self.stack.addWidget(self._page_welcome())  # 0
+        self.stack.addWidget(self._page_profile())  # 1
+        self.stack.addWidget(self._page_syscheck())  # 2
 
         # Footer nav
         footer = QWidget()
@@ -217,7 +242,9 @@ class OnboardingDialog(QDialog):
         title.setObjectName("pageTitle")
         l.addWidget(title)
 
-        subtitle = QLabel("Moruk OS lernt deinen Stil und passt sich an. Je mehr du schreibst, desto besser.")
+        subtitle = QLabel(
+            "Moruk OS lernt deinen Stil und passt sich an. Je mehr du schreibst, desto besser."
+        )
         subtitle.setObjectName("pageSubtitle")
         subtitle.setWordWrap(True)
         l.addWidget(subtitle)
@@ -232,7 +259,9 @@ class OnboardingDialog(QDialog):
         # Beruf
         l.addWidget(self._label("Was machst du beruflich?"))
         self.profile_job = QLineEdit()
-        self.profile_job.setPlaceholderText("z.B. Software Engineer, Designer, Forscher...")
+        self.profile_job.setPlaceholderText(
+            "z.B. Software Engineer, Designer, Forscher..."
+        )
         self.profile_job.setObjectName("inputField")
         l.addWidget(self.profile_job)
 
@@ -240,7 +269,9 @@ class OnboardingDialog(QDialog):
         l.addWidget(self._label("Bevorzugte Sprache"))
         self.profile_lang = QComboBox()
         self.profile_lang.setObjectName("inputField")
-        self.profile_lang.addItems(["Deutsch", "English", "Türkçe", "Français", "Español", "中文"])
+        self.profile_lang.addItems(
+            ["Deutsch", "English", "Türkçe", "Français", "Español", "中文"]
+        )
         l.addWidget(self.profile_lang)
 
         # Bio
@@ -305,7 +336,9 @@ class OnboardingDialog(QDialog):
             row.addWidget(link)
             l.addLayout(row)
 
-        note = QLabel("🔒 Keys werden lokal in config/settings.json gespeichert — nie übertragen.")
+        note = QLabel(
+            "🔒 Keys werden lokal in config/settings.json gespeichert — nie übertragen."
+        )
         note.setObjectName("noteLabel")
         note.setWordWrap(True)
         l.addStretch()
@@ -381,10 +414,12 @@ class OnboardingDialog(QDialog):
 
     def _update_header(self, idx):
         titles = ["Willkommen", "Dein Profil", "Systemcheck"]
-        icons  = ["🌟", "👤", "🔍"]
+        icons = ["🌟", "👤", "🔍"]
         idx = min(idx, len(titles) - 1)
-        self.header.setText(f'<span style="font-size:24px">{icons[idx]}</span>  '
-                            f'<span style="font-size:18px; font-weight:bold">{titles[idx]}</span>')
+        self.header.setText(
+            f'<span style="font-size:24px">{icons[idx]}</span>  '
+            f'<span style="font-size:18px; font-weight:bold">{titles[idx]}</span>'
+        )
 
     # ── Validation ────────────────────────────────────────────
 
@@ -448,7 +483,7 @@ class OnboardingDialog(QDialog):
             "job": self.profile_job.text().strip(),
             "language": self.profile_lang.currentText(),
             "bio": self.profile_bio.toPlainText().strip(),
-            "onboarding_done": True
+            "onboarding_done": True,
         }
         os.makedirs(os.path.dirname(USER_PROFILE_PATH), exist_ok=True)
         with open(USER_PROFILE_PATH, "w") as f:
@@ -488,12 +523,13 @@ class OnboardingDialog(QDialog):
     def _save_profile(self):
         """Nur Profil speichern — API Keys kommen über Settings."""
         import json, os
+
         profile = {
             "name": self.profile_name.text().strip(),
             "job": self.profile_job.text().strip(),
             "language": self.profile_lang.currentText(),
             "bio": self.profile_bio.toPlainText().strip(),
-            "onboarding_done": True
+            "onboarding_done": True,
         }
         os.makedirs(os.path.dirname(USER_PROFILE_PATH), exist_ok=True)
         with open(USER_PROFILE_PATH, "w") as f:
@@ -630,6 +666,7 @@ class OnboardingDialog(QDialog):
 
 
 # ── Entry Point ───────────────────────────────────────────────────────────────
+
 
 def should_show_onboarding() -> bool:
     """True wenn Onboarding noch nicht abgeschlossen wurde."""

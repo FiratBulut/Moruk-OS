@@ -6,12 +6,14 @@ PLUGIN_PARAMS = {"detail": "brief|full (default: brief)"}
 import subprocess
 import re
 
+
 def _run(cmd):
     try:
         r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=5)
         return r.stdout.strip() if r.returncode == 0 else ""
     except Exception:
         return ""
+
 
 def execute(params):
     detail = params.get("detail", "brief")
@@ -53,19 +55,21 @@ def execute(params):
         for line in sensors.splitlines():
             ll = line.lower()
             if any(k in ll for k in ["tctl", "tdie", "core 0", "package", "cpu temp"]):
-                m = re.search(r'[+]?([0-9]+\.?[0-9]*)\xb0C', line)
+                m = re.search(r"[+]?([0-9]+\.?[0-9]*)\xb0C", line)
                 if m:
                     t = float(m.group(1))
                     label = line.split(":")[0].strip()
                     status = "HOT" if t > 85 else "WARM" if t > 70 else "OK"
                     lines.append(f"  {label}: {t:.1f}C [{status}]")
             if "fan" in ll and "rpm" in ll:
-                m = re.search(r'([0-9]+)\s+RPM', line)
+                m = re.search(r"([0-9]+)\s+RPM", line)
                 if m and int(m.group(1)) > 0:
                     label = line.split(":")[0].strip()
                     lines.append(f"  Fan {label}: {m.group(1)} RPM")
     else:
-        thermal = _run("for f in /sys/class/thermal/thermal_zone*/temp; do echo \"$(($(cat $f)/1000))C\"; done 2>/dev/null | head -5")
+        thermal = _run(
+            'for f in /sys/class/thermal/thermal_zone*/temp; do echo "$(($(cat $f)/1000))C"; done 2>/dev/null | head -5'
+        )
         if thermal:
             lines.append("Temperatures (sysfs): " + ", ".join(thermal.splitlines()))
 
@@ -74,6 +78,8 @@ def execute(params):
         if disk:
             p = disk.split()
             if len(p) >= 5:
-                lines.append(f"\nDisk /: {p[2]} used / {p[1]} total ({p[3]} free, {p[4]})")
+                lines.append(
+                    f"\nDisk /: {p[2]} used / {p[1]} total ({p[3]} free, {p[4]})"
+                )
 
     return {"success": True, "result": "\n".join(lines)}

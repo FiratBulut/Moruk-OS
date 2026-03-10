@@ -22,7 +22,7 @@ from core.logger import get_logger
 
 log = get_logger("monitor_engine")
 
-DATA_DIR  = Path(__file__).parent.parent / "data"
+DATA_DIR = Path(__file__).parent.parent / "data"
 MONITORS_FILE = DATA_DIR / "monitors.json"
 
 # Wird von autonomy_loop gesetzt
@@ -37,12 +37,12 @@ class MonitorEngine:
 
     # Monitor-Typen und ihre Such-Strategien
     TYPE_ICONS = {
-        "search":  "🔍",
-        "url":     "🌐",
-        "github":  "🐙",
-        "price":   "💰",
-        "news":    "📰",
-        "custom":  "📡",
+        "search": "🔍",
+        "url": "🌐",
+        "github": "🐙",
+        "price": "💰",
+        "news": "📰",
+        "custom": "📡",
     }
 
     def __init__(self):
@@ -76,8 +76,14 @@ class MonitorEngine:
 
     # ── CRUD ──────────────────────────────────────────────────
 
-    def add_monitor(self, name: str, monitor_type: str, query: str,
-                    interval_minutes: int = None, on_change: str = "notify") -> dict:
+    def add_monitor(
+        self,
+        name: str,
+        monitor_type: str,
+        query: str,
+        interval_minutes: int = None,
+        on_change: str = "notify",
+    ) -> dict:
         """Fügt einen neuen Monitor hinzu."""
         if not name or not query:
             return {"success": False, "error": "name and query are required"}
@@ -87,21 +93,21 @@ class MonitorEngine:
 
         with self._lock:
             self.monitors[monitor_id] = {
-                "id":               monitor_id,
-                "name":             name,
-                "type":             monitor_type or "search",
-                "query":            query,
+                "id": monitor_id,
+                "name": name,
+                "type": monitor_type or "search",
+                "query": query,
                 "interval_minutes": interval,
-                "on_change":        on_change,  # "notify" | "act" | "log"
-                "created_at":       datetime.now().isoformat(),
-                "last_checked":     None,
-                "next_check":       datetime.now().isoformat(),  # sofort beim ersten Mal
+                "on_change": on_change,  # "notify" | "act" | "log"
+                "created_at": datetime.now().isoformat(),
+                "last_checked": None,
+                "next_check": datetime.now().isoformat(),  # sofort beim ersten Mal
                 "last_result_hash": None,
-                "last_result":      None,
-                "last_change":      None,
-                "status":           "active",
-                "check_count":      0,
-                "change_count":     0,
+                "last_result": None,
+                "last_change": None,
+                "status": "active",
+                "check_count": 0,
+                "change_count": 0,
             }
             self._save()
 
@@ -117,7 +123,10 @@ class MonitorEngine:
                         monitor_id = mid
                         break
                 else:
-                    return {"success": False, "error": f"Monitor '{monitor_id}' not found"}
+                    return {
+                        "success": False,
+                        "error": f"Monitor '{monitor_id}' not found",
+                    }
             name = self.monitors[monitor_id]["name"]
             del self.monitors[monitor_id]
             self._save()
@@ -172,8 +181,8 @@ class MonitorEngine:
 
     def _tick(self):
         """Prüft alle Monitors ob sie gecheckt werden müssen."""
-        now = datetime.now()
         due = []
+        now = datetime.now()
 
         with self._lock:
             for mid, monitor in self.monitors.items():
@@ -212,8 +221,9 @@ class MonitorEngine:
 
         # Hash für Änderungs-Erkennung
         result_hash = hashlib.md5(result_text[:2000].encode()).hexdigest()
-        has_changed = (monitor.get("last_result_hash") is not None and
-                       result_hash != monitor.get("last_result_hash"))
+        has_changed = monitor.get(
+            "last_result_hash"
+        ) is not None and result_hash != monitor.get("last_result_hash")
 
         # Nächsten Check-Zeitpunkt berechnen
         interval = monitor.get("interval_minutes", self.DEFAULT_INTERVAL)
@@ -222,16 +232,20 @@ class MonitorEngine:
         with self._lock:
             if monitor_id not in self.monitors:
                 return
-            self.monitors[monitor_id].update({
-                "last_checked":     datetime.now().isoformat(),
-                "next_check":       next_check,
-                "last_result_hash": result_hash,
-                "last_result":      result_text[:1000],
-                "check_count":      monitor.get("check_count", 0) + 1,
-            })
+            self.monitors[monitor_id].update(
+                {
+                    "last_checked": datetime.now().isoformat(),
+                    "next_check": next_check,
+                    "last_result_hash": result_hash,
+                    "last_result": result_text[:1000],
+                    "check_count": monitor.get("check_count", 0) + 1,
+                }
+            )
             if has_changed:
                 self.monitors[monitor_id]["last_change"] = datetime.now().isoformat()
-                self.monitors[monitor_id]["change_count"] = monitor.get("change_count", 0) + 1
+                self.monitors[monitor_id]["change_count"] = (
+                    monitor.get("change_count", 0) + 1
+                )
             self._save()
 
         # Bei Änderung: Brain analysieren lassen und notifizieren
@@ -267,7 +281,8 @@ class MonitorEngine:
     def _fetch_search(self, query: str) -> str | None:
         try:
             from core.web_search import search_duckduckgo, format_search_results
-            results = search_duckduckgo(query, num=5)
+
+            results = search_duckduckgo(query, num_results=5)
             return format_search_results(results)
         except Exception as e:
             log.warning(f"Search failed: {e}")
@@ -276,13 +291,15 @@ class MonitorEngine:
     def _fetch_url(self, url: str) -> str | None:
         try:
             import urllib.request
+
             req = urllib.request.Request(url, headers={"User-Agent": "MorukOS/1.0"})
             with urllib.request.urlopen(req, timeout=15) as r:
                 content = r.read().decode("utf-8", errors="replace")
             # Nur Text, kein HTML
             import re
-            text = re.sub(r'<[^>]+>', ' ', content)
-            text = re.sub(r'\s+', ' ', text).strip()
+
+            text = re.sub(r"<[^>]+>", " ", content)
+            text = re.sub(r"\s+", " ", text).strip()
             return text[:3000]
         except Exception as e:
             log.warning(f"URL fetch failed: {e}")
@@ -291,19 +308,24 @@ class MonitorEngine:
     def _fetch_github(self, repo: str) -> str | None:
         """Holt GitHub Releases/Issues für ein Repo."""
         try:
-            import urllib.request, json as jsonlib
+            import urllib.request
+            import json as jsonlib
+
             # Format: owner/repo
             repo = repo.strip().strip("/")
             if "github.com/" in repo:
                 repo = repo.split("github.com/")[-1].strip("/")
             url = f"https://api.github.com/repos/{repo}/releases/latest"
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "MorukOS/1.0",
-                "Accept": "application/vnd.github.v3+json"
-            })
+            req = urllib.request.Request(
+                url,
+                headers={
+                    "User-Agent": "MorukOS/1.0",
+                    "Accept": "application/vnd.github.v3+json",
+                },
+            )
             with urllib.request.urlopen(req, timeout=15) as r:
                 data = jsonlib.loads(r.read())
-            tag  = data.get("tag_name", "?")
+            tag = data.get("tag_name", "?")
             name = data.get("name", "?")
             date = data.get("published_at", "?")[:10]
             body = data.get("body", "")[:500]
@@ -337,7 +359,7 @@ class MonitorEngine:
                     f"In 1-2 Sätzen: Was ist neu/interessant in diesen Monitoring-Ergebnissen für '{name}'?\n\n{new_result[:1500]}",
                     max_iterations=1,
                     depth=2,
-                    isolated=True
+                    isolated=True,
                 )
                 summary = analysis[:300] if analysis else summary
             except Exception:
@@ -358,7 +380,7 @@ class MonitorEngine:
                     f"Reagiere darauf: {monitor.get('action_prompt', 'Informiere den User und handle wenn nötig.')}",
                     max_iterations=5,
                     depth=3,
-                    isolated=True
+                    isolated=True,
                 )
             except Exception as e:
                 log.error(f"Monitor act failed: {e}")
@@ -371,21 +393,24 @@ class MonitorEngine:
         if not monitors:
             return "No monitors configured."
 
-        active   = sum(1 for m in monitors if m["status"] == "active")
-        paused   = sum(1 for m in monitors if m["status"] == "paused")
-        changed  = sum(1 for m in monitors if m.get("change_count", 0) > 0)
+        active = sum(1 for m in monitors if m["status"] == "active")
+        paused = sum(1 for m in monitors if m["status"] == "paused")
+        changed = sum(1 for m in monitors if m.get("change_count", 0) > 0)
 
         lines = [f"{active} active, {paused} paused, {changed} with changes"]
-        now = datetime.now()
 
         for m in sorted(monitors, key=lambda x: x.get("next_check") or ""):
-            icon   = self.TYPE_ICONS.get(m.get("type", "custom"), "📡")
+            icon = self.TYPE_ICONS.get(m.get("type", "custom"), "📡")
             status = "⏸" if m["status"] == "paused" else "●"
-            last   = m.get("last_checked")
-            last_str = datetime.fromisoformat(last).strftime("%H:%M") if last else "never"
+            last = m.get("last_checked")
+            last_str = (
+                datetime.fromisoformat(last).strftime("%H:%M") if last else "never"
+            )
             changes = m.get("change_count", 0)
             chg_str = f" ⚡{changes}" if changes > 0 else ""
-            lines.append(f"{status} {icon} {m['name']}  [{m['interval_minutes']}min | last: {last_str}{chg_str}]")
+            lines.append(
+                f"{status} {icon} {m['name']}  [{m['interval_minutes']}min | last: {last_str}{chg_str}]"
+            )
 
         return "\n".join(lines)
 

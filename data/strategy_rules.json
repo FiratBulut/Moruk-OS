@@ -1,0 +1,18 @@
+[
+  {
+    "key": "terminal:unknown",
+    "rule": "When using terminal: handle unknown errors. Check prerequisites first.",
+    "confidence": 1.0,
+    "occurrences": 26,
+    "created": "2026-03-10T19:16:18.722666",
+    "updated": "2026-03-10T19:29:41.814290"
+  },
+  {
+    "key": "project_subtask:unknown",
+    "rule": "When using project_subtask: handle unknown errors. Check prerequisites first.",
+    "confidence": 0.8999999999999999,
+    "occurrences": 6,
+    "created": "2026-03-10T19:26:17.619745",
+    "updated": "2026-03-10T19:26:17.634329"
+  }
+]

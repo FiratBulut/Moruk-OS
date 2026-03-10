@@ -10,7 +10,6 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 from collections import Counter
-import time
 from core.logger import get_logger
 
 log = get_logger("goals")
@@ -20,6 +19,7 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 # ═══════════════════════════════════════════════
 # 1. SIGNAL DETECTOR
 # ═══════════════════════════════════════════════
+
 
 class SignalDetector:
     """Scannt interne Daten nach Signalen die Ziele auslösen könnten."""
@@ -35,14 +35,16 @@ class SignalDetector:
             "learning": timedelta(minutes=15),
             "system_health": timedelta(hours=1),
             # Neue proaktive Signal-Typen
-            "daily_morning":   timedelta(hours=20),   # max 1x pro Tag
-            "daily_evening":   timedelta(hours=20),
-            "idle_suggestion": timedelta(minutes=30), # alle 30min wenn idle
-            "new_file":        timedelta(minutes=10), # neue Datei im Projekt
-            "long_idle":       timedelta(hours=2),    # sehr lang idle
+            "daily_morning": timedelta(hours=20),  # max 1x pro Tag
+            "daily_evening": timedelta(hours=20),
+            "idle_suggestion": timedelta(minutes=30),  # alle 30min wenn idle
+            "new_file": timedelta(minutes=10),  # neue Datei im Projekt
+            "long_idle": timedelta(hours=2),  # sehr lang idle
         }
 
-    def scan(self, reflector=None, tasks=None, memory=None, state=None, health_monitor=None) -> list:
+    def scan(
+        self, reflector=None, tasks=None, memory=None, state=None, health_monitor=None
+    ) -> list:
         """Scannt alle Quellen und gibt gefundene Signale zurück."""
         signals = []
 
@@ -89,24 +91,28 @@ class SignalDetector:
             error_types = Counter(e.get("error_type", "unknown") for e in errors[-20:])
             for error_type, count in error_types.items():
                 if count >= 3 and error_type != "unknown":
-                    signals.append({
-                        "type": "repeated_failure",
-                        "detail": f"Error '{error_type}' occurred {count}x recently",
-                        "data": {"error_type": error_type, "count": count},
-                        "impact": min(1.0, count * 0.15),
-                        "confidence": 0.8
-                    })
+                    signals.append(
+                        {
+                            "type": "repeated_failure",
+                            "detail": f"Error '{error_type}' occurred {count}x recently",
+                            "data": {"error_type": error_type, "count": count},
+                            "impact": min(1.0, count * 0.15),
+                            "confidence": 0.8,
+                        }
+                    )
 
         # Niedrige Erfolgsrate
         rate = stats.get("success_rate", 100)
         if rate < 60 and stats.get("total_actions", 0) > 10:
-            signals.append({
-                "type": "low_tool_efficiency",
-                "detail": f"Overall success rate dropped to {rate:.0f}%",
-                "data": {"success_rate": rate},
-                "impact": 0.7,
-                "confidence": 0.7
-            })
+            signals.append(
+                {
+                    "type": "low_tool_efficiency",
+                    "detail": f"Overall success rate dropped to {rate:.0f}%",
+                    "data": {"success_rate": rate},
+                    "impact": 0.7,
+                    "confidence": 0.7,
+                }
+            )
 
         # Tool mit schlechter Performance
         tool_usage = stats.get("tool_usage", {})
@@ -114,13 +120,15 @@ class SignalDetector:
             if count >= 5:
                 tool_errors = len([e for e in errors if e.get("tool") == tool])
                 if count > 0 and tool_errors / count > 0.5:
-                    signals.append({
-                        "type": "low_tool_efficiency",
-                        "detail": f"Tool '{tool}' fails >50% ({tool_errors}/{count})",
-                        "data": {"tool": tool, "fail_rate": tool_errors / count},
-                        "impact": 0.6,
-                        "confidence": 0.75
-                    })
+                    signals.append(
+                        {
+                            "type": "low_tool_efficiency",
+                            "detail": f"Tool '{tool}' fails >50% ({tool_errors}/{count})",
+                            "data": {"tool": tool, "fail_rate": tool_errors / count},
+                            "impact": 0.6,
+                            "confidence": 0.75,
+                        }
+                    )
 
         return signals
 
@@ -128,29 +136,42 @@ class SignalDetector:
         signals = []
 
         all_tasks = tasks.tasks
-        recent = [t for t in all_tasks if t.get("updated_at", "") > (datetime.now() - timedelta(hours=24)).isoformat()]
+        recent = [
+            t
+            for t in all_tasks
+            if t.get("updated_at", "")
+            > (datetime.now() - timedelta(hours=24)).isoformat()
+        ]
         failed = [t for t in recent if t.get("status") == "failed"]
 
         if len(failed) >= 3:
-            signals.append({
-                "type": "repeated_failure",
-                "detail": f"{len(failed)} tasks failed in last 24h",
-                "data": {"failed_tasks": len(failed)},
-                "impact": 0.6,
-                "confidence": 0.7
-            })
+            signals.append(
+                {
+                    "type": "repeated_failure",
+                    "detail": f"{len(failed)} tasks failed in last 24h",
+                    "data": {"failed_tasks": len(failed)},
+                    "impact": 0.6,
+                    "confidence": 0.7,
+                }
+            )
 
         # Langlebige pending Tasks (>2h alt)
-        old_pending = [t for t in tasks.get_active_tasks()
-                       if t.get("created_at", "") < (datetime.now() - timedelta(hours=2)).isoformat()]
+        old_pending = [
+            t
+            for t in tasks.get_active_tasks()
+            if t.get("created_at", "")
+            < (datetime.now() - timedelta(hours=2)).isoformat()
+        ]
         if old_pending:
-            signals.append({
-                "type": "optimization",
-                "detail": f"{len(old_pending)} tasks pending for >2 hours",
-                "data": {"stale_tasks": len(old_pending)},
-                "impact": 0.4,
-                "confidence": 0.6
-            })
+            signals.append(
+                {
+                    "type": "optimization",
+                    "detail": f"{len(old_pending)} tasks pending for >2 hours",
+                    "data": {"stale_tasks": len(old_pending)},
+                    "impact": 0.4,
+                    "confidence": 0.6,
+                }
+            )
 
         return signals
 
@@ -160,13 +181,15 @@ class SignalDetector:
 
         total = stats.get("long_term_count", 0)
         if total > 400:
-            signals.append({
-                "type": "maintenance",
-                "detail": f"Memory has {total} entries, cleanup recommended",
-                "data": {"memory_count": total},
-                "impact": 0.3,
-                "confidence": 0.9
-            })
+            signals.append(
+                {
+                    "type": "maintenance",
+                    "detail": f"Memory has {total} entries, cleanup recommended",
+                    "data": {"memory_count": total},
+                    "impact": 0.3,
+                    "confidence": 0.9,
+                }
+            )
 
         return signals
 
@@ -178,13 +201,15 @@ class SignalDetector:
         avg_per_session = interactions / max(sessions, 1)
 
         if avg_per_session > 50:
-            signals.append({
-                "type": "learning",
-                "detail": f"High interaction rate ({avg_per_session:.0f}/session), consider learning patterns",
-                "data": {"avg_interactions": avg_per_session},
-                "impact": 0.3,
-                "confidence": 0.5
-            })
+            signals.append(
+                {
+                    "type": "learning",
+                    "detail": f"High interaction rate ({avg_per_session:.0f}/session), consider learning patterns",
+                    "data": {"avg_interactions": avg_per_session},
+                    "impact": 0.3,
+                    "confidence": 0.5,
+                }
+            )
 
         return signals
 
@@ -199,7 +224,6 @@ class SignalDetector:
             log.warning(f"Health monitor scan failed: {e}")
         return signals
 
-
     def _scan_time_based(self) -> list:
         """Tageszeit-basierte Goals: Morgen-Check, Abend-Summary."""
         signals = []
@@ -207,23 +231,27 @@ class SignalDetector:
 
         # Morgen-Routine: 7-10 Uhr
         if 7 <= hour < 10:
-            signals.append({
-                "type": "daily_morning",
-                "detail": "Morning routine: system health check + task review",
-                "data": {"hour": hour},
-                "impact": 0.6,
-                "confidence": 0.95
-            })
+            signals.append(
+                {
+                    "type": "daily_morning",
+                    "detail": "Morning routine: system health check + task review",
+                    "data": {"hour": hour},
+                    "impact": 0.6,
+                    "confidence": 0.95,
+                }
+            )
 
         # Abend-Summary: 19-22 Uhr
         elif 19 <= hour < 22:
-            signals.append({
-                "type": "daily_evening",
-                "detail": "Evening summary: reflect on completed tasks and lessons learned",
-                "data": {"hour": hour},
-                "impact": 0.5,
-                "confidence": 0.9
-            })
+            signals.append(
+                {
+                    "type": "daily_evening",
+                    "detail": "Evening summary: reflect on completed tasks and lessons learned",
+                    "data": {"hour": hour},
+                    "impact": 0.5,
+                    "confidence": 0.9,
+                }
+            )
 
         return signals
 
@@ -233,7 +261,9 @@ class SignalDetector:
         if state is None:
             return signals
 
-        last_interaction = state.get("last_active", "") or state.get("last_interaction_at", "")
+        last_interaction = state.get("last_active", "") or state.get(
+            "last_interaction_at", ""
+        )
         if not last_interaction:
             return signals
 
@@ -243,23 +273,27 @@ class SignalDetector:
 
             # 30+ Minuten idle → leichte Aufgabe vorschlagen
             if idle_minutes >= 30:
-                signals.append({
-                    "type": "idle_suggestion",
-                    "detail": f"System idle for {idle_minutes:.0f} minutes — good time for background optimization",
-                    "data": {"idle_minutes": idle_minutes},
-                    "impact": 0.4,
-                    "confidence": 0.7
-                })
+                signals.append(
+                    {
+                        "type": "idle_suggestion",
+                        "detail": f"System idle for {idle_minutes:.0f} minutes — good time for background optimization",
+                        "data": {"idle_minutes": idle_minutes},
+                        "impact": 0.4,
+                        "confidence": 0.7,
+                    }
+                )
 
             # 2+ Stunden idle → Memory-Cleanup oder Reflection
             if idle_minutes >= 120:
-                signals.append({
-                    "type": "long_idle",
-                    "detail": f"System idle for {idle_minutes:.0f} minutes — run deep reflection and memory cleanup",
-                    "data": {"idle_minutes": idle_minutes},
-                    "impact": 0.55,
-                    "confidence": 0.85
-                })
+                signals.append(
+                    {
+                        "type": "long_idle",
+                        "detail": f"System idle for {idle_minutes:.0f} minutes — run deep reflection and memory cleanup",
+                        "data": {"idle_minutes": idle_minutes},
+                        "impact": 0.55,
+                        "confidence": 0.85,
+                    }
+                )
 
         except Exception:
             pass
@@ -292,13 +326,15 @@ class SignalDetector:
                 continue
 
         if new_files:
-            signals.append({
-                "type": "new_file",
-                "detail": f"New/modified files detected: {', '.join(new_files[:3])}",
-                "data": {"files": new_files},
-                "impact": 0.5,
-                "confidence": 0.8
-            })
+            signals.append(
+                {
+                    "type": "new_file",
+                    "detail": f"New/modified files detected: {', '.join(new_files[:3])}",
+                    "data": {"files": new_files},
+                    "impact": 0.5,
+                    "confidence": 0.8,
+                }
+            )
 
         return signals
 
@@ -306,6 +342,7 @@ class SignalDetector:
 # ═══════════════════════════════════════════════
 # 2. OPPORTUNITY ANALYZER
 # ═══════════════════════════════════════════════
+
 
 class OpportunityAnalyzer:
     """Bewertet ob ein Signal ein Ziel wert ist."""
@@ -339,14 +376,17 @@ class OpportunityAnalyzer:
             "impact": impact,
             "confidence": confidence,
             "novelty": novelty,
-            "effort": effort
+            "effort": effort,
         }
 
     def _calc_novelty(self, signal: dict, existing_goals: list) -> float:
         """Wie neu ist dieses Signal? 1.0 = komplett neu."""
         sig_type = signal["type"]
-        similar = [g for g in existing_goals
-                   if g.get("source_signal") == sig_type and g.get("status") != "discarded"]
+        similar = [
+            g
+            for g in existing_goals
+            if g.get("source_signal") == sig_type and g.get("status") != "discarded"
+        ]
         if not similar:
             return 1.0
         elif len(similar) == 1:
@@ -380,13 +420,16 @@ class OpportunityAnalyzer:
 # 3. GOAL QUEUE MANAGER
 # ═══════════════════════════════════════════════
 
+
 class GoalEngine:
     """Zentrale Goal Generation + Management Engine."""
 
     MAX_ACTIVE_GOALS = 5
     MAX_STORED_GOALS = 50
 
-    def __init__(self, reflector=None, tasks=None, memory=None, state=None, health_monitor=None):
+    def __init__(
+        self, reflector=None, tasks=None, memory=None, state=None, health_monitor=None
+    ):
         self.reflector = reflector
         self.tasks = tasks
         self.memory = memory
@@ -411,7 +454,7 @@ class GoalEngine:
 
     def _save_goals(self):
         """Speichert Goals atomar via Temp-Datei (konsistent mit TaskManager)."""
-        self.goals = self.goals[-self.MAX_STORED_GOALS:]
+        self.goals = self.goals[-self.MAX_STORED_GOALS :]
         tmp_path = self.goals_path.with_suffix(".tmp")
         try:
             with open(tmp_path, "w", encoding="utf-8") as f:
@@ -442,7 +485,7 @@ class GoalEngine:
             tasks=self.tasks,
             memory=self.memory,
             state=self.state,
-            health_monitor=self.health_monitor
+            health_monitor=self.health_monitor,
         )
 
         if not signals:
@@ -459,8 +502,10 @@ class GoalEngine:
         if new_goals:
             self._sort_queue()
             self._save_goals()
-            log.info(f"Generated {len(new_goals)} new goals: "
-                     f"{[g['title'][:40] for g in new_goals]}")
+            log.info(
+                f"Generated {len(new_goals)} new goals: "
+                f"{[g['title'][:40] for g in new_goals]}"
+            )
 
         return new_goals
 
@@ -479,12 +524,12 @@ class GoalEngine:
             "maintenance": "Run system maintenance and cleanup",
             "learning": "Analyze interaction patterns for improvements",
             "user_pattern": "Automate detected user workflow",
-            "system_health":    "Run system health repair",
-            "daily_morning":   "Morning routine: system check + task review",
-            "daily_evening":   "Evening reflection: summarize today's work",
+            "system_health": "Run system health repair",
+            "daily_morning": "Morning routine: system check + task review",
+            "daily_evening": "Evening reflection: summarize today's work",
             "idle_suggestion": "Background optimization while idle",
-            "long_idle":       "Deep reflection and memory cleanup",
-            "new_file":        "Analyze and integrate newly detected files",
+            "long_idle": "Deep reflection and memory cleanup",
+            "new_file": "Analyze and integrate newly detected files",
         }
 
         goal = {
@@ -502,16 +547,27 @@ class GoalEngine:
         }
 
         self.goals.append(goal)
-        log.info(f"Goal created: [{goal['id']}] {goal['title']} (priority={goal['priority']:.2f})")
+        log.info(
+            f"Goal created: [{goal['id']}] {goal['title']} (priority={goal['priority']:.2f})"
+        )
         return goal
 
     def _safety_check(self, signal: dict) -> bool:
         """Sicherheitsprüfung: Nur sichere, lokale, reversible Ziele."""
         safe_types = {
-            "repeated_failure", "low_tool_efficiency", "optimization",
-            "maintenance", "learning", "user_pattern", "system_health",
+            "repeated_failure",
+            "low_tool_efficiency",
+            "optimization",
+            "maintenance",
+            "learning",
+            "user_pattern",
+            "system_health",
             # Proaktive Typen
-            "daily_morning", "daily_evening", "idle_suggestion", "long_idle", "new_file",
+            "daily_morning",
+            "daily_evening",
+            "idle_suggestion",
+            "long_idle",
+            "new_file",
         }
         return signal.get("type") in safe_types
 
@@ -542,7 +598,7 @@ class GoalEngine:
                     task = self.tasks.add_task(
                         title=f"🎯 {goal['title']}",
                         description=f"Auto-generated goal: {goal['reason']}",
-                        priority="normal"
+                        priority="normal",
                     )
                     goal["task_ids"].append(task["id"])
 
@@ -564,7 +620,7 @@ class GoalEngine:
                     self.memory.remember_long(
                         f"Completed self-generated goal: {goal['title']}",
                         category="reflection",
-                        tags=["goal", "self-improvement"]
+                        tags=["goal", "self-improvement"],
                     )
                 log.info(f"Goal completed: {goal_id}")
                 return
@@ -582,13 +638,15 @@ class GoalEngine:
                 goal["completed_at"] = datetime.now().isoformat()
                 goal["updated_at"] = datetime.now().isoformat()
                 completed.append(goal)
-                log.info(f"Goal completed via task [{task_id}]: {goal['id']} — {goal['title']}")
+                log.info(
+                    f"Goal completed via task [{task_id}]: {goal['id']} — {goal['title']}"
+                )
 
                 if self.memory:
                     self.memory.remember_long(
                         f"Completed self-generated goal: {goal['title']}",
                         category="reflection",
-                        tags=["goal", "self-improvement"]
+                        tags=["goal", "self-improvement"],
                     )
 
         if completed:
@@ -617,7 +675,9 @@ class GoalEngine:
 
         parts = [f"Self-Generated Goals ({len(active)}):"]
         for goal in active[:5]:
-            parts.append(f"  🎯 [{goal['status']}] {goal['title']} (priority: {goal['priority']:.2f})")
+            parts.append(
+                f"  🎯 [{goal['status']}] {goal['title']} (priority: {goal['priority']:.2f})"
+            )
             parts.append(f"     Reason: {goal['reason'][:80]}")
         return "\n".join(parts)
 
@@ -629,5 +689,5 @@ class GoalEngine:
             "active": statuses.get("active", 0),
             "completed": statuses.get("completed", 0),
             "failed": statuses.get("failed", 0),
-            "discarded": statuses.get("discarded", 0)
+            "discarded": statuses.get("discarded", 0),
         }

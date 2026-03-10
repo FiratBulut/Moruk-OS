@@ -5,13 +5,16 @@ Analysiert Dateien: Größe, Typ, Wortanzahl, Code-Zeilen.
 
 PLUGIN_CORE = True
 PLUGIN_NAME = "file_analyzer"
-PLUGIN_DESCRIPTION = "Analysiert Dateien: Größe, Typ, Zeilenanzahl, Wortanzahl, Code-Metriken."
+PLUGIN_DESCRIPTION = (
+    "Analysiert Dateien: Größe, Typ, Zeilenanzahl, Wortanzahl, Code-Metriken."
+)
 PLUGIN_PARAMS = {"path": "Pfad zur Datei oder Verzeichnis"}
 
 import os
 import mimetypes
 from pathlib import Path
 from datetime import datetime
+
 
 def execute(params):
     path = params.get("path", "")
@@ -37,10 +40,20 @@ def execute(params):
 
         ext = Path(path).suffix.lower()
         code_exts = {
-            ".py": "Python", ".js": "JavaScript", ".ts": "TypeScript",
-            ".cpp": "C++", ".c": "C", ".java": "Java", ".go": "Go",
-            ".rs": "Rust", ".sh": "Shell", ".json": "JSON", ".yaml": "YAML",
-            ".md": "Markdown", ".html": "HTML", ".css": "CSS"
+            ".py": "Python",
+            ".js": "JavaScript",
+            ".ts": "TypeScript",
+            ".cpp": "C++",
+            ".c": "C",
+            ".java": "Java",
+            ".go": "Go",
+            ".rs": "Rust",
+            ".sh": "Shell",
+            ".json": "JSON",
+            ".yaml": "YAML",
+            ".md": "Markdown",
+            ".html": "HTML",
+            ".css": "CSS",
         }
         lang = code_exts.get(ext, "Text/Binary")
         lines_out.append(f"Language:  {lang}")
@@ -52,8 +65,22 @@ def execute(params):
             n_words = len(content.split())
             n_chars = len(content)
             # Count code lines (non-empty, non-comment)
-            if lang in ("Python", "JavaScript", "TypeScript", "C++", "C", "Java", "Go", "Rust", "Shell"):
-                code_lines = sum(1 for l in content.splitlines() if l.strip() and not l.strip().startswith(("#", "//", "*", "/*")))
+            if lang in (
+                "Python",
+                "JavaScript",
+                "TypeScript",
+                "C++",
+                "C",
+                "Java",
+                "Go",
+                "Rust",
+                "Shell",
+            ):
+                code_lines = sum(
+                    1
+                    for l in content.splitlines()
+                    if l.strip() and not l.strip().startswith(("#", "//", "*", "/*"))
+                )
                 lines_out.append(f"Lines:     {n_lines} total / {code_lines} code")
             else:
                 lines_out.append(f"Lines:     {n_lines}")

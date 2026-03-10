@@ -70,9 +70,11 @@ def _run_agent(agent_def: dict, result_queue: queue.Queue, idx: int, timeout: in
             try:
                 args = shlex.split(task)
                 out = subprocess.check_output(
-                    args, shell=False, timeout=timeout,
+                    args,
+                    shell=False,
+                    timeout=timeout,
                     stderr=subprocess.STDOUT,
-                    cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                 )
                 output = out.decode(errors="replace").strip()[:2000]
                 status = "ok"
@@ -80,18 +82,33 @@ def _run_agent(agent_def: dict, result_queue: queue.Queue, idx: int, timeout: in
                 output = str(e)
                 status = "error"
 
-            result_queue.put((idx, {
-                "role": role, "task": task, "status": status,
-                "output": output, "duration": round(time.time() - start_time, 1)
-            }))
+            result_queue.put(
+                (
+                    idx,
+                    {
+                        "role": role,
+                        "task": task,
+                        "status": status,
+                        "output": output,
+                        "duration": round(time.time() - start_time, 1),
+                    },
+                )
+            )
             return
 
         if _brain is None:
-            result_queue.put((idx, {
-                "role": role, "task": task, "status": "error",
-                "output": "Brain not connected to multi_agent plugin",
-                "duration": 0
-            }))
+            result_queue.put(
+                (
+                    idx,
+                    {
+                        "role": role,
+                        "task": task,
+                        "status": "error",
+                        "output": "Brain not connected to multi_agent plugin",
+                        "duration": 0,
+                    },
+                )
+            )
             return
 
         role_system = ROLE_PROMPTS.get(role, ROLE_PROMPTS["executor"])
@@ -102,21 +119,35 @@ def _run_agent(agent_def: dict, result_queue: queue.Queue, idx: int, timeout: in
             extra_context=f"[AGENT ROLE: {role.upper()}]\n{role_system}",
             max_iterations=12,
             depth=3,
-            isolated=True
+            isolated=True,
         )
 
-        result_queue.put((idx, {
-            "role": role, "task": task, "status": "ok",
-            "output": (response or "(no output)")[:3000],
-            "duration": round(time.time() - start_time, 1)
-        }))
+        result_queue.put(
+            (
+                idx,
+                {
+                    "role": role,
+                    "task": task,
+                    "status": "ok",
+                    "output": (response or "(no output)")[:3000],
+                    "duration": round(time.time() - start_time, 1),
+                },
+            )
+        )
 
     except Exception as e:
-        result_queue.put((idx, {
-            "role": role, "task": task, "status": "error",
-            "output": f"Agent error: {e}",
-            "duration": round(time.time() - start_time, 1)
-        }))
+        result_queue.put(
+            (
+                idx,
+                {
+                    "role": role,
+                    "task": task,
+                    "status": "error",
+                    "output": f"Agent error: {e}",
+                    "duration": round(time.time() - start_time, 1),
+                },
+            )
+        )
 
 
 def execute(params: dict) -> dict:
@@ -128,7 +159,10 @@ def execute(params: dict) -> dict:
         agents = [{"role": "executor", "task": t} for t in params["tasks"]]
 
     if not agents:
-        return {"success": False, "result": "No agents defined. Use: {agents: [{role, task}]}"}
+        return {
+            "success": False,
+            "result": "No agents defined. Use: {agents: [{role, task}]}",
+        }
     if len(agents) > 8:
         return {"success": False, "result": "Max 8 parallel agents allowed"}
 
@@ -139,9 +173,7 @@ def execute(params: dict) -> dict:
 
     for i, agent_def in enumerate(agents):
         t = threading.Thread(
-            target=_run_agent,
-            args=(agent_def, result_queue, i, timeout),
-            daemon=True
+            target=_run_agent, args=(agent_def, result_queue, i, timeout), daemon=True
         )
         t.start()
         threads.append(t)
@@ -154,13 +186,19 @@ def execute(params: dict) -> dict:
         idx, result = result_queue.get()
         raw_results[idx] = result
 
-    results = [raw_results.get(i, {
-        "role": agents[i].get("role", "?"),
-        "task": agents[i].get("task", "?"),
-        "status": "timeout",
-        "output": "Agent timed out",
-        "duration": timeout
-    }) for i in range(len(agents))]
+    results = [
+        raw_results.get(
+            i,
+            {
+                "role": agents[i].get("role", "?"),
+                "task": agents[i].get("task", "?"),
+                "status": "timeout",
+                "output": "Agent timed out",
+                "duration": timeout,
+            },
+        )
+        for i in range(len(agents))
+    ]
 
     success_count = sum(1 for r in results if r["status"] == "ok")
     total_duration = max((r.get("duration", 0) for r in results), default=0)
@@ -182,5 +220,5 @@ def execute(params: dict) -> dict:
         "result": "\n".join(parts),
         "details": results,
         "success_count": success_count,
-        "parallel_duration": total_duration
+        "parallel_duration": total_duration,
     }

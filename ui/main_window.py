@@ -1,6 +1,15 @@
 """
-Moruk AI OS - Main Window v5
+Moruk AI OS - Main Window v5.1
 Frameless Glass Design, Chat Bubbles mit Copy-Button, Custom Titlebar.
+
+v5.1 Fixes:
+- tool_router.set_brain() wird jetzt aufgerufen (Plugins bekommen Brain-Referenz)
+- tool_router.set_autonomy_loop() statt direktem _autonomy_loop Attribut
+- _toggle_deepthink: brain.deepthink statt tool_router.deepthink
+- _show_monitor_notification/_show_routing_hint: chat_display → _append_message
+- closeEvent: _load_chat_history() entfernt (existierte nicht → Crash)
+- _tool_group_count wird jetzt inkrementiert (war immer 0)
+- ThinkWorker: unnötiger inspect.signature Call entfernt
 """
 
 import base64
@@ -10,12 +19,37 @@ import threading
 from datetime import datetime
 
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QTextEdit, QPushButton, QLabel, QSplitter,
-    QScrollArea, QFrame, QApplication, QSizeGrip, QListWidget, QListWidgetItem,
-    QComboBox, QGroupBox, QLineEdit
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QTextEdit,
+    QPushButton,
+    QLabel,
+    QSplitter,
+    QScrollArea,
+    QFrame,
+    QApplication,
+    QSizeGrip,
+    QListWidget,
+    QListWidgetItem,
+    QComboBox,
+    QGroupBox,
+    QLineEdit,
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QObject, QTimer, QBuffer, QIODevice, QByteArray, pyqtSlot, QMetaObject, Q_ARG
+from PyQt6.QtCore import (
+    Qt,
+    QThread,
+    pyqtSignal,
+    QObject,
+    QTimer,
+    QBuffer,
+    QIODevice,
+    QByteArray,
+    pyqtSlot,
+    QMetaObject,
+    Q_ARG,
+)
 from PyQt6.QtGui import QFont, QKeyEvent, QPixmap, QImage
 
 from ui.settings_dialog import SettingsDialog
@@ -43,13 +77,16 @@ from core.heartbeat import Heartbeat
 
 class ThinkWorker(QObject):
     """Worker für async LLM Calls mit Tool-Loop + Streaming."""
+
     finished = pyqtSignal(str)
     error = pyqtSignal(str)
     tool_start = pyqtSignal(str, str)
     tool_result = pyqtSignal(str, str, bool)
     token_received = pyqtSignal(str)
 
-    def __init__(self, brain, message, context, max_iterations=10, depth=3, force_deepthink=False):
+    def __init__(
+        self, brain, message, context, max_iterations=10, depth=3, force_deepthink=False
+    ):
         super().__init__()
         self.brain = brain
         self.message = message
@@ -66,22 +103,19 @@ class ThinkWorker(QObject):
                 if name == "write_file":
                     self.tool_start.emit(name, json.dumps(params, ensure_ascii=False))
                 else:
-                    self.tool_start.emit(name, json.dumps(params, ensure_ascii=False)[:300])
+                    self.tool_start.emit(
+                        name, json.dumps(params, ensure_ascii=False)[:300]
+                    )
 
             def on_tool_result(name, result):
                 self.tool_result.emit(
                     name,
                     str(result.get("result", ""))[:500],
-                    result.get("success", False)
+                    result.get("success", False),
                 )
 
             def on_token(token):
                 self.token_received.emit(token)
-
-            # DeepThink hat andere think() Signatur — kein tool_start/depth/max_iterations
-            import inspect
-            sig = inspect.signature(self.brain.think)
-            params = sig.parameters
 
             response = self.brain.think(
                 self.message,
@@ -91,7 +125,7 @@ class ThinkWorker(QObject):
                 max_iterations=self.max_iterations,
                 depth=self.depth,
                 on_token=on_token,
-                force_deepthink=self.force_deepthink
+                force_deepthink=self.force_deepthink,
             )
 
             self.finished.emit(response)
@@ -101,6 +135,7 @@ class ThinkWorker(QObject):
 
 class ChatInput(QTextEdit):
     """Custom Input mit Enter=Send, Shift+Enter=Newline, Drag&Drop, Paste."""
+
     send_signal = pyqtSignal()
     file_attached = pyqtSignal(str, str, object)  # path, mime_type, thumbnail_pixmap
 
@@ -115,7 +150,10 @@ class ChatInput(QTextEdit):
                 super().keyPressEvent(event)
             else:
                 self.send_signal.emit()
-        elif event.key() == Qt.Key.Key_V and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        elif (
+            event.key() == Qt.Key.Key_V
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
             # Ctrl+V: Check for image in clipboard
             clipboard = QApplication.clipboard()
             mime = clipboard.mimeData()
@@ -160,8 +198,12 @@ class ChatInput(QTextEdit):
         if mime_type.startswith("image/"):
             thumb = QPixmap(filepath)
             if not thumb.isNull():
-                thumb = thumb.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio,
-                                     Qt.TransformationMode.SmoothTransformation)
+                thumb = thumb.scaled(
+                    80,
+                    80,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
 
             # Base64 für LLM
             try:
@@ -183,7 +225,9 @@ class ChatInput(QTextEdit):
             return
 
         # Als PNG in temp speichern
-        temp_dir = os.path.join(os.path.expanduser("~"), "moruk-os", "data", "attachments")
+        temp_dir = os.path.join(
+            os.path.expanduser("~"), "moruk-os", "data", "attachments"
+        )
         os.makedirs(temp_dir, exist_ok=True)
 
         filename = f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
@@ -200,8 +244,12 @@ class ChatInput(QTextEdit):
         buffer.close()
 
         # Thumbnail
-        thumb = pixmap.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio,
-                              Qt.TransformationMode.SmoothTransformation)
+        thumb = pixmap.scaled(
+            80,
+            80,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
 
         self.attached_files.append((filepath, "image/png", b64))
         self.file_attached.emit(filepath, "image/png", thumb)
@@ -216,7 +264,9 @@ class ChatInput(QTextEdit):
         if pixmap.isNull():
             return
 
-        temp_dir = os.path.join(os.path.expanduser("~"), "moruk-os", "data", "attachments")
+        temp_dir = os.path.join(
+            os.path.expanduser("~"), "moruk-os", "data", "attachments"
+        )
         os.makedirs(temp_dir, exist_ok=True)
         filename = f"dropped_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
         filepath = os.path.join(temp_dir, filename)
@@ -228,8 +278,12 @@ class ChatInput(QTextEdit):
         b64 = base64.b64encode(buffer.data().data()).decode()
         buffer.close()
 
-        thumb = pixmap.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio,
-                              Qt.TransformationMode.SmoothTransformation)
+        thumb = pixmap.scaled(
+            80,
+            80,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
 
         self.attached_files.append((filepath, "image/png", b64))
         self.file_attached.emit(filepath, "image/png", thumb)
@@ -256,7 +310,7 @@ class ChatBubble(QFrame):
             "tool_result": "toolResultBubble",
             "system": "systemBubble",
             "reflection": "reflectionBubble",
-            "token_info": "tokenInfoBubble"
+            "token_info": "tokenInfoBubble",
         }
         self.setObjectName(bubble_ids.get(role, "systemBubble"))
 
@@ -267,7 +321,7 @@ class ChatBubble(QFrame):
             "tool_result": "#00d2ff",
             "system": "rgba(255,255,255,0.3)",
             "reflection": "#ffa500",
-            "token_info": "rgba(255,255,255,0.25)"
+            "token_info": "rgba(255,255,255,0.25)",
         }
 
         sender_names = {
@@ -277,7 +331,7 @@ class ChatBubble(QFrame):
             "tool_result": "→ Result",
             "system": "System",
             "reflection": "🧠 Reflect",
-            "token_info": ""
+            "token_info": "",
         }
 
         layout = QVBoxLayout(self)
@@ -338,16 +392,24 @@ class ChatBubble(QFrame):
                             img = QImage()
                             img.loadFromData(QByteArray(data))
                             pix = QPixmap.fromImage(img)
-                            pix = pix.scaled(90, 90, Qt.AspectRatioMode.KeepAspectRatio,
-                                           Qt.TransformationMode.SmoothTransformation)
+                            pix = pix.scaled(
+                                90,
+                                90,
+                                Qt.AspectRatioMode.KeepAspectRatio,
+                                Qt.TransformationMode.SmoothTransformation,
+                            )
                             img_label.setPixmap(pix)
                         except Exception:
                             img_label.setText("🖼")
                     elif os.path.exists(filepath):
                         pix = QPixmap(filepath)
                         if not pix.isNull():
-                            pix = pix.scaled(90, 90, Qt.AspectRatioMode.KeepAspectRatio,
-                                           Qt.TransformationMode.SmoothTransformation)
+                            pix = pix.scaled(
+                                90,
+                                90,
+                                Qt.AspectRatioMode.KeepAspectRatio,
+                                Qt.TransformationMode.SmoothTransformation,
+                            )
                             img_label.setPixmap(pix)
                         else:
                             img_label.setText("🖼")
@@ -371,13 +433,17 @@ class ChatBubble(QFrame):
                             break
 
                     icon_label = QLabel(icon)
-                    icon_label.setStyleSheet("font-size: 32px; background: transparent; border: none;")
+                    icon_label.setStyleSheet(
+                        "font-size: 32px; background: transparent; border: none;"
+                    )
                     icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                     af_layout.addWidget(icon_label)
 
                 # Dateiname
                 name_label = QLabel(fname[:25])
-                name_label.setStyleSheet("color: rgba(255,255,255,0.5); font-size: 10px; background: transparent; border: none;")
+                name_label.setStyleSheet(
+                    "color: rgba(255,255,255,0.5); font-size: 10px; background: transparent; border: none;"
+                )
                 name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 af_layout.addWidget(name_label)
 
@@ -392,8 +458,8 @@ class ChatBubble(QFrame):
             text_label.setObjectName("bubbleText")
             text_label.setWordWrap(True)
             text_label.setTextInteractionFlags(
-                Qt.TextInteractionFlag.TextSelectableByMouse |
-                Qt.TextInteractionFlag.LinksAccessibleByMouse
+                Qt.TextInteractionFlag.TextSelectableByMouse
+                | Qt.TextInteractionFlag.LinksAccessibleByMouse
             )
             text_label.setOpenExternalLinks(True)
 
@@ -403,10 +469,14 @@ class ChatBubble(QFrame):
                 text_label.setText(markdown_to_html(text))
             elif role == "system":
                 text_label.setText(text)
-                text_label.setStyleSheet("color: rgba(255,255,255,0.35); font-style: italic; font-size: 12px;")
+                text_label.setStyleSheet(
+                    "color: rgba(255,255,255,0.35); font-style: italic; font-size: 12px;"
+                )
             elif role in ("tool_exec", "tool_result"):
                 text_label.setText(text)
-                text_label.setStyleSheet("font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 12px; color: rgba(255,255,255,0.5);")
+                text_label.setStyleSheet(
+                    "font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 12px; color: rgba(255,255,255,0.5);"
+                )
             elif role == "reflection":
                 text_label.setText(text)
                 text_label.setStyleSheet("color: #ffa500; font-size: 12px;")
@@ -422,6 +492,7 @@ class ChatBubble(QFrame):
         if sender:
             sender.setText("✓")
             from PyQt6.QtCore import QTimer
+
             QTimer.singleShot(1500, lambda: sender.setText("📋"))
 
 
@@ -473,15 +544,21 @@ class CollapsibleToolBlock(QWidget):
 
         # Params
         self.params_label = QLabel(f"<b>Params:</b> {params[:200]}")
-        self.params_label.setStyleSheet("color: rgba(255,255,255,0.5); font-size: 11px;")
+        self.params_label.setStyleSheet(
+            "color: rgba(255,255,255,0.5); font-size: 11px;"
+        )
         self.params_label.setWordWrap(True)
         detail_layout.addWidget(self.params_label)
 
         # Result
         self.result_label = QLabel("⏳ Running...")
-        self.result_label.setStyleSheet("color: rgba(255,255,255,0.75); font-size: 11px;")
+        self.result_label.setStyleSheet(
+            "color: rgba(255,255,255,0.75); font-size: 11px;"
+        )
         self.result_label.setWordWrap(True)
-        self.result_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.result_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
         detail_layout.addWidget(self.result_label)
 
         self.detail_widget.setVisible(False)
@@ -524,8 +601,6 @@ class CollapsibleToolBlock(QWidget):
     @_current_status.setter
     def _current_status(self, v):
         self.__status = v
-
-
 
 
 class ToolGroupBlock(QWidget):
@@ -633,10 +708,10 @@ class ToolGroupBlock(QWidget):
             self.header_btn.setText(text[:-1] + "▶")
 
 
-
 # ═══════════════════════════════════════════════
 # MONITOR WINDOW
 # ═══════════════════════════════════════════════
+
 
 class MonitorWindow(QWidget):
     """Floating window — zeigt alle Web-Monitors und deren Status."""
@@ -675,7 +750,9 @@ class MonitorWindow(QWidget):
         title.setObjectName("title")
         outer.addWidget(title)
 
-        sub = QLabel("Moruk beobachtet diese Quellen automatisch und meldet Änderungen.")
+        sub = QLabel(
+            "Moruk beobachtet diese Quellen automatisch und meldet Änderungen."
+        )
         sub.setObjectName("sub")
         sub.setWordWrap(True)
         outer.addWidget(sub)
@@ -723,7 +800,9 @@ class MonitorWindow(QWidget):
         outer.addWidget(form_box)
 
         list_label = QLabel("Aktive Monitors")
-        list_label.setStyleSheet("font-weight:bold;color:rgba(255,255,255,0.5);font-size:11px;")
+        list_label.setStyleSheet(
+            "font-weight:bold;color:rgba(255,255,255,0.5);font-size:11px;"
+        )
         outer.addWidget(list_label)
 
         scroll = QScrollArea()
@@ -731,7 +810,7 @@ class MonitorWindow(QWidget):
         self.list_widget = QWidget()
         self.list_layout = QVBoxLayout(self.list_widget)
         self.list_layout.setSpacing(6)
-        self.list_layout.setContentsMargins(0,0,0,0)
+        self.list_layout.setContentsMargins(0, 0, 0, 0)
         self.list_layout.addStretch()
         scroll.setWidget(self.list_widget)
         outer.addWidget(scroll, stretch=1)
@@ -763,30 +842,38 @@ class MonitorWindow(QWidget):
 
         monitors = self.monitor_engine.list_monitors()
         if not monitors:
-            lbl = QLabel("Noch keine Monitors.\n\nFüge oben einen Monitor hinzu oder sag Moruk:\n'Beobachte täglich den EUR/USD Kurs'")
-            lbl.setStyleSheet("color:rgba(255,255,255,0.4);padding:20px;font-size:12px;")
+            lbl = QLabel(
+                "Noch keine Monitors.\n\nFüge oben einen Monitor hinzu oder sag Moruk:\n'Beobachte täglich den EUR/USD Kurs'"
+            )
+            lbl.setStyleSheet(
+                "color:rgba(255,255,255,0.4);padding:20px;font-size:12px;"
+            )
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.list_layout.insertWidget(0, lbl)
             return
 
         from core.monitor_engine import MonitorEngine as ME
         from datetime import datetime
+
         for i, m in enumerate(monitors):
             self.list_layout.insertWidget(i, self._make_card(m))
 
     def _make_card(self, m):
         from core.monitor_engine import MonitorEngine as ME
         from datetime import datetime
+
         card = QWidget()
-        card.setStyleSheet("QWidget{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;}")
+        card.setStyleSheet(
+            "QWidget{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;}"
+        )
         cl = QHBoxLayout(card)
-        cl.setContentsMargins(12,10,10,10)
-        icon = ME.TYPE_ICONS.get(m.get("type","custom"),"📡")
-        status_color = "#aaaaaa" if m["status"]=="paused" else "#00cc88"
+        cl.setContentsMargins(12, 10, 10, 10)
+        icon = ME.TYPE_ICONS.get(m.get("type", "custom"), "📡")
+        status_color = "#aaaaaa" if m["status"] == "paused" else "#00cc88"
         last = m.get("last_checked")
         last_str = datetime.fromisoformat(last).strftime("%d.%m %H:%M") if last else "–"
-        chg = m.get("change_count",0)
-        chg_str = f"  ⚡{chg}" if chg>0 else ""
+        chg = m.get("change_count", 0)
+        chg_str = f"  ⚡{chg}" if chg > 0 else ""
         info = QLabel(
             f"<b style='color:white;font-size:13px;'>{icon} {m['name']}</b>"
             f"<br><span style='color:rgba(255,255,255,0.45);font-size:11px;'>"
@@ -797,27 +884,42 @@ class MonitorWindow(QWidget):
         info.setTextFormat(Qt.TextFormat.RichText)
         cl.addWidget(info, stretch=1)
         dot = QLabel("●")
-        dot.setStyleSheet(f"color:{status_color};font-size:10px;background:transparent;border:none;")
+        dot.setStyleSheet(
+            f"color:{status_color};font-size:10px;background:transparent;border:none;"
+        )
         cl.addWidget(dot)
         rm = QPushButton("✕")
-        rm.setFixedSize(26,26)
-        rm.setStyleSheet("QPushButton{background:rgba(233,69,96,0.1);color:#e94560;border:1px solid rgba(233,69,96,0.2);border-radius:4px;font-size:11px;}QPushButton:hover{background:rgba(233,69,96,0.3);}")
+        rm.setFixedSize(26, 26)
+        rm.setStyleSheet(
+            "QPushButton{background:rgba(233,69,96,0.1);color:#e94560;border:1px solid rgba(233,69,96,0.2);border-radius:4px;font-size:11px;}QPushButton:hover{background:rgba(233,69,96,0.3);}"
+        )
         rm.clicked.connect(lambda _, i=m["id"]: self._remove_monitor(i))
         cl.addWidget(rm)
         return card
 
     def _add_monitor(self):
-        if not self.monitor_engine: return
+        if not self.monitor_engine:
+            return
         name = self.name_input.text().strip()
         query = self.query_input.text().strip()
         if not name or not query:
             from PyQt6.QtWidgets import QMessageBox
+
             QMessageBox.warning(self, "Missing", "Name and Query required.")
             return
-        try: interval = int(self.interval_input.text().strip() or "60")
-        except ValueError: interval = 60
-        self.monitor_engine.add_monitor(name, self.type_combo.currentText(), query, interval, self.onchange_combo.currentText())
-        self.name_input.clear(); self.query_input.clear()
+        try:
+            interval = int(self.interval_input.text().strip() or "60")
+        except ValueError:
+            interval = 60
+        self.monitor_engine.add_monitor(
+            name,
+            self.type_combo.currentText(),
+            query,
+            interval,
+            self.onchange_combo.currentText(),
+        )
+        self.name_input.clear()
+        self.query_input.clear()
         self.refresh()
 
     def _remove_monitor(self, mid):
@@ -828,6 +930,7 @@ class MonitorWindow(QWidget):
     def _check_all(self):
         if self.monitor_engine:
             self.monitor_engine.force_check_all()
+
 
 class MainWindow(QMainWindow):
     """Moruk OS v5 – Frameless Glass Design."""
@@ -840,9 +943,15 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         from core.logger import get_logger
+
         self.log = get_logger("ui")
 
-        self.startup_result = startup_result or {"ok": True, "issues": [], "warnings": [], "info": []}
+        self.startup_result = startup_result or {
+            "ok": True,
+            "issues": [],
+            "warnings": [],
+            "info": [],
+        }
         self.bubble_count = 0
         self._tool_blocks = {}  # tool_name -> CollapsibleToolBlock
         self._current_tool_group = None  # Aktive ToolGroupBlock während Antwort
@@ -859,6 +968,7 @@ class MainWindow(QMainWindow):
 
         self.tool_router = ToolRouter(self.executor, self.tasks, self.memory)
         self.tool_router.reflector = self.reflector
+        self.tool_router.set_brain(self.brain)  # FIX: Plugins bekommen Brain-Referenz
         self.brain.tool_router = self.tool_router
 
         # ── Token-Saving Engine ──
@@ -871,41 +981,49 @@ class MainWindow(QMainWindow):
             reflector=self.reflector,
             tasks=self.tasks,
             memory=self.memory,
-            state=self.state
+            state=self.state,
         )
 
         # System Health Monitor
         from core.system_health import SystemHealthMonitor
+
         self.health_monitor = SystemHealthMonitor()
 
         self.autonomy = AutonomyLoop(
-            self.brain, self.state, self.tasks,
-            self.reflector, self.memory
+            self.brain, self.state, self.tasks, self.reflector, self.memory
         )
         self.autonomy.goal_engine = self.goal_engine
         self.autonomy.health_monitor = self.health_monitor
-        self.goal_engine.health_monitor = self.health_monitor  # Wire health signals to goal engine
+        self.goal_engine.health_monitor = (
+            self.health_monitor
+        )  # Wire health signals to goal engine
         self.autonomy.thought_signal.connect(self._on_autonomy_thought)
         self.autonomy.status_signal.connect(self._update_status)
         self.autonomy.tool_start_signal.connect(self._on_tool_start)
         self.autonomy.tool_result_signal.connect(self._on_tool_result)
         # Live Activity: Autonomy/Project Tool-Calls weiterleiten
         self.autonomy.tool_start_signal.connect(
-            lambda name, params: self.live_activity.sig_tool_start.emit(name, params)
-            if hasattr(self, 'live_activity') else None
+            lambda name, params: (
+                self.live_activity.sig_tool_start.emit(name, params)
+                if hasattr(self, "live_activity")
+                else None
+            )
         )
         self.autonomy.tool_result_signal.connect(
-            lambda name, result, success: self.live_activity.sig_tool_result.emit(name, result, success)
-            if hasattr(self, 'live_activity') else None
+            lambda name, result, success: (
+                self.live_activity.sig_tool_result.emit(name, result, success)
+                if hasattr(self, "live_activity")
+                else None
+            )
         )
         self.autonomy_active = False
 
         # ── Project Manager ──
         self.project_manager = ProjectManager(
             brain=self.brain,
-            deepthink=self.tool_router.deepthink,
+            deepthink=self.brain.deepthink,
             task_manager=self.tasks,
-            reflector=self.reflector
+            reflector=self.reflector,
         )
         self.autonomy.project_manager = self.project_manager
 
@@ -915,20 +1033,25 @@ class MainWindow(QMainWindow):
         # ── Monitor Engine ──
         try:
             from core.monitor_engine import MonitorEngine
+
             self.monitor_engine = MonitorEngine()
-            self.monitor_engine.start(brain=self.brain, notify_fn=self._show_monitor_notification)
+            self.monitor_engine.start(
+                brain=self.brain, notify_fn=self._show_monitor_notification
+            )
             self.autonomy.monitor_engine = self.monitor_engine
             try:
                 import plugins.web_monitor as wm
+
                 wm._engine = self.monitor_engine
             except Exception:
                 pass
-            self.log.info(f"MonitorEngine started ({len(self.monitor_engine.monitors)} monitors)")
+            self.log.info(
+                f"MonitorEngine started ({len(self.monitor_engine.monitors)} monitors)"
+            )
         except Exception as e:
             self.monitor_engine = None
             self.log.warning(f"MonitorEngine not available: {e}")
-        self.tool_router.project_manager = self.project_manager
-        self.tool_router._autonomy_loop = self.autonomy
+        self.tool_router.set_autonomy_loop(self.autonomy)  # FIX: saubere Referenz
 
         # ── Heartbeat Monitor ──
         self.heartbeat = Heartbeat(on_failure=self._on_heartbeat_failure)
@@ -963,9 +1086,9 @@ class MainWindow(QMainWindow):
         self.worker = None
 
         # ── Voice State ──
-        self.tts_enabled = False       # Speaker toggle
-        self.mic_recording = False     # Mic recording state
-        self._mic_thread = None        # STT worker thread
+        self.tts_enabled = False  # Speaker toggle
+        self.mic_recording = False  # Mic recording state
+        self._mic_thread = None  # STT worker thread
 
         # ── System Watchdog ──
         self._active_alerts = []
@@ -1101,7 +1224,9 @@ class MainWindow(QMainWindow):
         hp_layout.setSpacing(6)
 
         hp_title = QLabel("💬 Chat History")
-        hp_title.setStyleSheet("color:rgba(255,255,255,0.5);font-size:11px;font-weight:bold;padding:4px 0;")
+        hp_title.setStyleSheet(
+            "color:rgba(255,255,255,0.5);font-size:11px;font-weight:bold;padding:4px 0;"
+        )
         hp_layout.addWidget(hp_title)
 
         self.history_list = QListWidget()
@@ -1147,7 +1272,9 @@ class MainWindow(QMainWindow):
         self.chat_scroll = QScrollArea()
         self.chat_scroll.setObjectName("chatScroll")
         self.chat_scroll.setWidgetResizable(True)
-        self.chat_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.chat_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         self.chat_scroll.setAcceptDrops(True)
 
         self.chat_container = QWidget()
@@ -1315,15 +1442,22 @@ class MainWindow(QMainWindow):
         self.history_panel.hide()
 
         # ── Sidebar außerhalb Splitter → keine Pfeile ──
-        self.sidebar = Sidebar(self.tasks, self.memory, self.reflector, self.state,
-                               goal_engine=self.goal_engine,
-                               self_model=self.tool_router.self_model,
-                               main_window=self)
+        self.sidebar = Sidebar(
+            self.tasks,
+            self.memory,
+            self.reflector,
+            self.state,
+            goal_engine=self.goal_engine,
+            self_model=self.tool_router.self_model,
+            main_window=self,
+        )
         self.sidebar.setFixedWidth(360)
         self.sidebar.hide()
 
         # Project Progress Signal → Sidebar
-        self.autonomy.project_progress_signal.connect(self.sidebar.update_project_progress)
+        self.autonomy.project_progress_signal.connect(
+            self.sidebar.update_project_progress
+        )
 
         content_row = QHBoxLayout()
         content_row.setSpacing(0)
@@ -1341,7 +1475,9 @@ class MainWindow(QMainWindow):
 
     def _title_mouse_press(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            self._drag_pos = (
+                event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            )
 
     def _title_mouse_move(self, event):
         if self._drag_pos and event.buttons() & Qt.MouseButton.LeftButton:
@@ -1411,28 +1547,33 @@ class MainWindow(QMainWindow):
 
     def _show_startup_message(self):
         if self.state.is_first_session():
-            self._append_message("system",
+            self._append_message(
+                "system",
                 "🟢 MORUK OS initialized. First session.\n"
-                "Configure your brain: click ⚙ to set Provider + API Key."
+                "Configure your brain: click ⚙ to set Provider + API Key.",
             )
         else:
             session = self.state.get("session_count")
             interactions = self.state.get("total_interactions")
-            self._append_message("system",
-                f"🔄 Session #{session} | {interactions} interactions | State restored."
+            self._append_message(
+                "system",
+                f"🔄 Session #{session} | {interactions} interactions | State restored.",
             )
 
             stats = self.reflector.get_full_stats()
             if stats.get("total_actions", 0) > 0:
-                self._append_message("reflection",
+                self._append_message(
+                    "reflection",
                     f"{stats['total_actions']} actions | "
                     f"{stats['success_rate']:.0f}% success | "
-                    f"streak: {stats.get('streak', {}).get('current', 0)}"
+                    f"streak: {stats.get('streak', {}).get('current', 0)}",
                 )
 
         # Startup Check Ergebnisse — Health Summary
         info = self.startup_result.get("info", [])
-        health_parts = [i for i in info if any(k in i for k in ["Disk", "RAM", "Watchdog", "DB"])]
+        health_parts = [
+            i for i in info if any(k in i for k in ["Disk", "RAM", "Watchdog", "DB"])
+        ]
         if health_parts and not self.state.is_first_session():
             self._append_message("reflection", "System: " + " | ".join(health_parts))
 
@@ -1450,7 +1591,9 @@ class MainWindow(QMainWindow):
             self._append_message("system", f"📋 {task_info}")
 
         if not self.brain.is_configured():
-            self._append_message("system", "⚠ Click ⚙ to configure your brain provider.")
+            self._append_message(
+                "system", "⚠ Click ⚙ to configure your brain provider."
+            )
 
     # ══ Message Handling ══════════════════════════════════════
 
@@ -1473,20 +1616,52 @@ class MainWindow(QMainWindow):
         # Auto-detect "merke dir" → direkt in long-term memory + user profile speichern
         if text:
             txt_lower = text.lower().strip()
-            merke_prefixes = ["merke dir:", "merke dir ", "remember:", "remember ", "save:", "speichere:"]
+            merke_prefixes = [
+                "merke dir:",
+                "merke dir ",
+                "remember:",
+                "remember ",
+                "save:",
+                "speichere:",
+            ]
             for prefix in merke_prefixes:
                 if txt_lower.startswith(prefix):
-                    info = text[len(prefix):].strip()
+                    info = text[len(prefix) :].strip()
                     if info:
                         personal_keywords = [
-                            "liebling", "favorite", "mag ", "liebe ", "hasse ",
-                            "mein name", "ich bin", "ich arbeite", "mein job",
-                            "mein hobby", "ich wohne", "meine familie", "ich heiße",
-                            "mein alter", "ich esse", "ich trinke", "ich spiele",
-                            "ich lese", "mein beruf", "ich mag", "my name", "i am",
-                            "my hobby", "my job", "i live", "i eat", "i drink"
+                            "liebling",
+                            "favorite",
+                            "mag ",
+                            "liebe ",
+                            "hasse ",
+                            "mein name",
+                            "ich bin",
+                            "ich arbeite",
+                            "mein job",
+                            "mein hobby",
+                            "ich wohne",
+                            "meine familie",
+                            "ich heiße",
+                            "mein alter",
+                            "ich esse",
+                            "ich trinke",
+                            "ich spiele",
+                            "ich lese",
+                            "mein beruf",
+                            "ich mag",
+                            "my name",
+                            "i am",
+                            "my hobby",
+                            "my job",
+                            "i live",
+                            "i eat",
+                            "i drink",
                         ]
-                        category = "personal" if any(kw in txt_lower for kw in personal_keywords) else "learned"
+                        category = (
+                            "personal"
+                            if any(kw in txt_lower for kw in personal_keywords)
+                            else "learned"
+                        )
                         self.memory.remember_long(info, category=category)
                     break
 
@@ -1494,9 +1669,11 @@ class MainWindow(QMainWindow):
         if text.startswith(("/project ", "!project ")):
             prompt = text.split(" ", 1)[1]
             self.autonomy.queue_project(prompt)
-            self._append_message("system",
+            self._append_message(
+                "system",
                 f"🏗 Projekt gestartet: {prompt[:80]}...\n"
-                "DeepThink zerlegt die Aufgabe in Subtasks.")
+                "DeepThink zerlegt die Aufgabe in Subtasks.",
+            )
             self.input_field.setEnabled(True)
             return
 
@@ -1514,13 +1691,17 @@ class MainWindow(QMainWindow):
                 # Hinweis: Echte Vision-API braucht base64 im Message-Format
                 # Das wird von brain.py unterstützt wenn Provider es kann
             else:
-                file_context += f"\n[Attached file: {fname} ({mime_type}) at {filepath}]"
+                file_context += (
+                    f"\n[Attached file: {fname} ({mime_type}) at {filepath}]"
+                )
 
         if file_context:
             llm_message += f"\n\n--- ATTACHED FILES ---{file_context}"
 
         # ── Intelligent Context Routing ──
-        classification = self.context_router.classify(text or "", has_attachments=bool(attachments))
+        classification = self.context_router.classify(
+            text or "", has_attachments=bool(attachments)
+        )
         intent = classification["intent"]
         depth = classification["depth"]
 
@@ -1531,7 +1712,7 @@ class MainWindow(QMainWindow):
             memory=self.memory,
             tasks=self.tasks,
             reflector=self.reflector,
-            query=text or ""
+            query=text or "",
         )
 
         # History Compression
@@ -1543,15 +1724,22 @@ class MainWindow(QMainWindow):
         # Max iterations basierend auf Depth
         max_iter = {1: 1, 2: 3, 3: 10, 4: 10, 5: 10}.get(depth, 10)
 
-        self.log.info(f"Router: intent={intent}, depth={depth}, max_iter={max_iter}, "
-                      f"context_len={len(context.split())} words")
+        self.log.info(
+            f"Router: intent={intent}, depth={depth}, max_iter={max_iter}, "
+            f"context_len={len(context.split())} words"
+        )
 
         self.worker_thread = QThread()
         if self._deepthink_mode:
             self.log.info("DeepThink Modus aktiv — force_deepthink=True")
-        self.worker = ThinkWorker(self.brain, llm_message, context,
-                                  max_iterations=max_iter, depth=depth,
-                                  force_deepthink=self._deepthink_mode)
+        self.worker = ThinkWorker(
+            self.brain,
+            llm_message,
+            context,
+            max_iterations=max_iter,
+            depth=depth,
+            force_deepthink=self._deepthink_mode,
+        )
         self.worker.moveToThread(self.worker_thread)
 
         self.worker_thread.started.connect(self.worker.run)
@@ -1561,7 +1749,7 @@ class MainWindow(QMainWindow):
         self.worker.tool_result.connect(self._on_tool_result)
         self.worker.token_received.connect(self._on_token)
         # Live Activity Window immer verbinden (auch wenn versteckt)
-        if hasattr(self, 'live_activity'):
+        if hasattr(self, "live_activity"):
             self.live_activity.connect_worker(self.worker)
         self.worker.finished.connect(self.worker_thread.quit)
         self.worker.error.connect(self.worker_thread.quit)
@@ -1573,8 +1761,8 @@ class MainWindow(QMainWindow):
         self.worker_thread.start()
 
         # Autonomy Loop für 120s pausieren damit er nicht gleich wiederholt
-        if hasattr(self, 'autonomy') and self.autonomy:
-            self.autonomy._user_active_until = __import__('time').time() + 120
+        if hasattr(self, "autonomy") and self.autonomy:
+            self.autonomy._user_active_until = __import__("time").time() + 120
 
     # ══ Attachment Preview ══════════════════════════════════
 
@@ -1599,22 +1787,32 @@ class MainWindow(QMainWindow):
         # Thumbnail oder Icon
         if isinstance(thumb, QPixmap) and not thumb.isNull():
             img_label = QLabel()
-            img_label.setPixmap(thumb.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio,
-                                             Qt.TransformationMode.SmoothTransformation))
+            img_label.setPixmap(
+                thumb.scaled(
+                    80,
+                    80,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
             img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             img_label.setStyleSheet("background: transparent; border: none;")
             p_layout.addWidget(img_label)
         else:
             icon = "📄" if "pdf" in (mime_type or "") else "📎"
             icon_label = QLabel(icon)
-            icon_label.setStyleSheet("font-size: 28px; background: transparent; border: none;")
+            icon_label.setStyleSheet(
+                "font-size: 28px; background: transparent; border: none;"
+            )
             icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             p_layout.addWidget(icon_label)
 
         # Filename
         fname = os.path.basename(filepath)
         name_label = QLabel(fname[:20])
-        name_label.setStyleSheet("color: rgba(255,255,255,0.5); font-size: 10px; background: transparent; border: none;")
+        name_label.setStyleSheet(
+            "color: rgba(255,255,255,0.5); font-size: 10px; background: transparent; border: none;"
+        )
         name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         p_layout.addWidget(name_label)
 
@@ -1632,7 +1830,9 @@ class MainWindow(QMainWindow):
             }
             QPushButton:hover { background: rgba(233,69,96,0.7); }
         """)
-        remove_btn.clicked.connect(lambda checked, p=preview, fp=filepath: self._remove_attachment(p, fp))
+        remove_btn.clicked.connect(
+            lambda checked, p=preview, fp=filepath: self._remove_attachment(p, fp)
+        )
         p_layout.addWidget(remove_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # Vor dem Stretch einfügen
@@ -1699,7 +1899,9 @@ class MainWindow(QMainWindow):
         if not response or not response.strip():
             tool_count = self._tool_group_count
             if tool_count > 0:
-                response = f"✅ {tool_count} Tool{'s' if tool_count > 1 else ''} ausgeführt."
+                response = (
+                    f"✅ {tool_count} Tool{'s' if tool_count > 1 else ''} ausgeführt."
+                )
             else:
                 response = "✅ Erledigt."
 
@@ -1716,7 +1918,7 @@ class MainWindow(QMainWindow):
         else:
             self._append_message("assistant", response)
 
-        self._tool_group_count = 0   # Reset für nächste Antwort
+        self._tool_group_count = 0  # Reset für nächste Antwort
         self._update_status("● Ready")
         self.input_field.setEnabled(True)
         self.input_field.setFocus()
@@ -1732,24 +1934,24 @@ class MainWindow(QMainWindow):
         """Zeigt Token-Nutzung als kleine Info-Zeile im Chat."""
         try:
             usage = self.brain.last_token_usage
-            if not usage or not usage.get('total'):
+            if not usage or not usage.get("total"):
                 return
-            inp = usage.get('input', 0)
-            out = usage.get('output', 0)
-            total = usage.get('total', 0)
+            inp = usage.get("input", 0)
+            out = usage.get("output", 0)
+            total = usage.get("total", 0)
             # Kosten schaetzen (Anthropic claude-3.5-sonnet: $3/$15 per 1M)
-            model = self.brain.settings.get('model', '')
-            if 'claude-3-5' in model or 'claude-3.5' in model:
+            model = self.brain.settings.get("model", "")
+            if "claude-3-5" in model or "claude-3.5" in model:
                 cost = (inp * 3.0 + out * 15.0) / 1_000_000
-            elif 'claude-3-opus' in model:
+            elif "claude-3-opus" in model:
                 cost = (inp * 15.0 + out * 75.0) / 1_000_000
-            elif 'claude-3' in model:
+            elif "claude-3" in model:
                 cost = (inp * 0.25 + out * 1.25) / 1_000_000
-            elif 'gpt-4o' in model:
+            elif "gpt-4o" in model:
                 cost = (inp * 2.5 + out * 10.0) / 1_000_000
-            elif 'gpt-4' in model:
+            elif "gpt-4" in model:
                 cost = (inp * 30.0 + out * 60.0) / 1_000_000
-            elif 'gpt-3.5' in model:
+            elif "gpt-3.5" in model:
                 cost = (inp * 0.5 + out * 1.5) / 1_000_000
             else:
                 cost = None
@@ -1772,6 +1974,7 @@ class MainWindow(QMainWindow):
 
     def _on_tool_start(self, tool_name: str, params: str):
         self._update_status(f"⚡ {tool_name}...")
+        self._tool_group_count += 1  # FIX: Counter war nie inkrementiert
         # Neuen CollapsibleToolBlock erstellen
         block = CollapsibleToolBlock(tool_name, params)
         self._tool_blocks[tool_name] = block
@@ -1821,7 +2024,9 @@ class MainWindow(QMainWindow):
             self.autonomy.start_autonomy()
             self.autonomy_active = True
             self.autonomy_btn.setText("⟳ Autonomy: ON")
-            self.sidebar.refresh_timer.setInterval(2000)  # Schnellerer Refresh während Autonomy
+            self.sidebar.refresh_timer.setInterval(
+                2000
+            )  # Schnellerer Refresh während Autonomy
 
     def _emergency_recovery(self):
         """Notfall-Recovery: Stellt letzten Snapshot wieder her."""
@@ -1829,6 +2034,7 @@ class MainWindow(QMainWindow):
 
         try:
             from core.recovery import RecoveryManager
+
             recovery = RecoveryManager()
 
             # Health Check
@@ -1836,19 +2042,25 @@ class MainWindow(QMainWindow):
             snapshots = recovery.get_snapshots()
 
             if health["healthy"] and not snapshots:
-                QMessageBox.information(self, "🔧 Recovery",
+                QMessageBox.information(
+                    self,
+                    "🔧 Recovery",
                     "✓ System is healthy!\n\n"
                     f"Checked {health['checked']} files — no issues detected.\n\n"
-                    "Recovery is not needed.")
+                    "Recovery is not needed.",
+                )
                 return
 
             if not snapshots:
-                QMessageBox.warning(self, "🔧 Recovery",
+                QMessageBox.warning(
+                    self,
+                    "🔧 Recovery",
                     "No snapshots available yet.\n\n"
                     "Snapshots are created automatically before each self_edit.\n"
                     "Once Moruk modifies his own code, snapshots will appear here.\n\n"
                     "For manual recovery, run in terminal:\n"
-                    "  cd ~/moruk-os && python recovery.py")
+                    "  cd <moruk-os-dir> && python recovery.py",
+                )
                 return
 
             # ── STEP 1: Info-Dialog ──
@@ -1879,22 +2091,28 @@ class MainWindow(QMainWindow):
             info_msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
             info_msg += "Do you want to proceed?"
 
-            reply = QMessageBox.warning(self, "🔧 Recovery — Confirmation",
+            reply = QMessageBox.warning(
+                self,
+                "🔧 Recovery — Confirmation",
                 info_msg,
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No)  # Default = No
+                QMessageBox.StandardButton.No,
+            )  # Default = No
 
             if reply != QMessageBox.StandardButton.Yes:
                 return
 
             # ── STEP 2: Zweite Bestätigung ──
-            confirm = QMessageBox.question(self, "🔧 Final Confirmation",
+            confirm = QMessageBox.question(
+                self,
+                "🔧 Final Confirmation",
                 f"Are you sure?\n\n"
                 f"This will restore {snapshots[0].get('file_count', '?')} source files "
                 f"to the state from:\n{snapshots[0].get('created_at', 'unknown')}\n\n"
                 f"Moruk OS needs to restart after recovery.",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No)
+                QMessageBox.StandardButton.No,
+            )
 
             if confirm != QMessageBox.StandardButton.Yes:
                 return
@@ -1902,32 +2120,44 @@ class MainWindow(QMainWindow):
             # ── STEP 3: Recovery ausführen ──
             result = recovery.restore_snapshot()
             if result["success"]:
-                QMessageBox.information(self, "✓ Recovery Complete",
+                QMessageBox.information(
+                    self,
+                    "✓ Recovery Complete",
                     f"Successfully restored {result['restored']} files!\n\n"
                     f"Snapshot: {result['snapshot_id']}\n\n"
                     "⚠ Please restart Moruk OS now\n"
-                    "for changes to take effect.")
-                if hasattr(self, 'tray_icon'):
-                    self.tray_icon.show_notification("✓ Recovery Complete", f"Restored {result['restored']} files. Please restart.")
+                    "for changes to take effect.",
+                )
+                if hasattr(self, "tray_icon"):
+                    self.tray_icon.show_notification(
+                        "✓ Recovery Complete",
+                        f"Restored {result['restored']} files. Please restart.",
+                    )
             else:
-                QMessageBox.warning(self, "Recovery Error",
+                QMessageBox.warning(
+                    self,
+                    "Recovery Error",
                     f"Recovery had errors:\n"
                     f"{result.get('error', str(result.get('errors', 'Unknown')))}\n\n"
                     "Try manual recovery:\n"
-                    "  cd ~/moruk-os && python recovery.py")
+                    "  cd <moruk-os-dir> && python recovery.py",
+                )
 
         except Exception as e:
-            QMessageBox.critical(self, "Recovery Error",
+            QMessageBox.critical(
+                self,
+                "Recovery Error",
                 f"Recovery system failed: {str(e)}\n\n"
                 "Try manual recovery in terminal:\n"
-                "  cd ~/moruk-os && python recovery.py")
+                "  cd <moruk-os-dir> && python recovery.py",
+            )
 
     def _on_autonomy_thought(self, thought: str):
         self._append_message("assistant", thought)
         self.sidebar.refresh_all()
         # Tray-Notification wenn Fenster minimiert
         if self.isMinimized() or not self.isActiveWindow():
-            if hasattr(self, 'tray_icon'):
+            if hasattr(self, "tray_icon"):
                 self.tray_icon.show_notification("🤖 Moruk", thought[:100])
 
     # ══ Voice Controls ═══════════════════════════════════════
@@ -1968,13 +2198,14 @@ class MainWindow(QMainWindow):
 
         # Markdown/HTML Tags und Tool-Blöcke rausfiltern
         import re
-        clean = re.sub(r'<[^>]+>', '', text)               # HTML Tags
-        clean = re.sub(r'```[\s\S]*?```', '', clean)       # Code Blocks
-        clean = re.sub(r'`[^`]+`', '', clean)              # Inline Code
-        clean = re.sub(r'\[.*?\]\(.*?\)', '', clean)        # Links
-        clean = re.sub(r'[*_#>~|]', '', clean)             # Markdown Formatierung
-        clean = re.sub(r'📊.*$', '', clean, flags=re.MULTILINE)  # Token Info
-        clean = re.sub(r'✅ \d+ Tools? ausgeführt\.', '', clean)  # Tool Summary
+
+        clean = re.sub(r"<[^>]+>", "", text)  # HTML Tags
+        clean = re.sub(r"```[\s\S]*?```", "", clean)  # Code Blocks
+        clean = re.sub(r"`[^`]+`", "", clean)  # Inline Code
+        clean = re.sub(r"\[.*?\]\(.*?\)", "", clean)  # Links
+        clean = re.sub(r"[*_#>~|]", "", clean)  # Markdown Formatierung
+        clean = re.sub(r"📊.*$", "", clean, flags=re.MULTILINE)  # Token Info
+        clean = re.sub(r"✅ \d+ Tools? ausgeführt\.", "", clean)  # Tool Summary
         clean = clean.strip()
 
         if not clean or len(clean) < 3:
@@ -1987,6 +2218,7 @@ class MainWindow(QMainWindow):
         def _speak():
             try:
                 import plugins.voice as voice_plugin
+
                 voice_plugin.execute({"text": clean})
             except Exception as e:
                 self.log.error(f"TTS error: {e}")
@@ -2006,7 +2238,9 @@ class MainWindow(QMainWindow):
         """Startet einen Projekt-Task aus dem aktuellen Input-Text."""
         text = self.input_field.toPlainText().strip()
         if not text:
-            self._append_message("system", "🏗 Bitte zuerst einen Projekt-Prompt eingeben.")
+            self._append_message(
+                "system", "🏗 Bitte zuerst einen Projekt-Prompt eingeben."
+            )
             return
         if not self.brain.is_configured():
             self._append_message("system", "Bitte zuerst Brain konfigurieren.")
@@ -2015,8 +2249,10 @@ class MainWindow(QMainWindow):
         self._append_message("user", text)
         self.autonomy.queue_project(text)
         preview = text[:80]
-        self._append_message("system",
-            f"🏗 Projekt gestartet: {preview}... — DeepThink zerlegt in Subtasks.")
+        self._append_message(
+            "system",
+            f"🏗 Projekt gestartet: {preview}... — DeepThink zerlegt in Subtasks.",
+        )
         if not self.autonomy.isRunning():
             self.autonomy.start()
         if not self.autonomy_active:
@@ -2028,12 +2264,14 @@ class MainWindow(QMainWindow):
         # Spinner starten + Input deaktivieren
         self._project_spinner_timer.start(200)
         self.input_field.setEnabled(False)
-        self.input_field.setPlaceholderText("🏗 Projekt läuft... (🏗 klicken zum Abbrechen)")
+        self.input_field.setPlaceholderText(
+            "🏗 Projekt läuft... (🏗 klicken zum Abbrechen)"
+        )
         self.project_btn.setToolTip("Projekt abbrechen")
 
     def _stop_project(self):
         """Bricht laufendes Projekt ab."""
-        if hasattr(self, 'project_manager') and self.project_manager:
+        if hasattr(self, "project_manager") and self.project_manager:
             self.project_manager.stop()
         self._project_running_done()
         self._append_message("system", "⏹ Projekt abgebrochen.")
@@ -2049,19 +2287,21 @@ class MainWindow(QMainWindow):
     def _spin_project_btn(self):
         """Dreht den Spinner im Project Button — stoppt wenn Projekt fertig."""
         # Prüfen ob Projekt noch läuft
-        if hasattr(self, 'project_manager') and not self.project_manager.is_running:
+        if hasattr(self, "project_manager") and not self.project_manager.is_running:
             self._project_running_done()
             return
         self._project_spinner_idx = (self._project_spinner_idx + 1) % 4
-        self.project_btn.setText(self._project_spinner_frames[self._project_spinner_idx])
+        self.project_btn.setText(
+            self._project_spinner_frames[self._project_spinner_idx]
+        )
 
     def _toggle_deepthink(self):
         """Schaltet DeepThink-Modus ein/aus."""
         self._deepthink_mode = self.deepthink_btn.isChecked()
         if self._deepthink_mode:
-            # Modellname aus DeepThink-Objekt lesen
-            dt = getattr(self.tool_router, 'deepthink', None)
-            model = getattr(dt, 'model', None) or "DeepThink"
+            # Modellname aus Brain's DeepThink-Objekt lesen
+            dt = self.brain.deepthink  # FIX: brain hat deepthink, nicht tool_router
+            model = self.brain.settings.get("deepthink_model", "DeepThink") if dt else "DeepThink"
             self._update_status(f"🧠 DeepThink aktiv: {str(model)[:30]}")
             self.input_field.setPlaceholderText("🧠 DeepThink Modus aktiv...")
         else:
@@ -2094,6 +2334,7 @@ class MainWindow(QMainWindow):
         self._update_status("🎤 Listening...")
 
         import threading
+
         self._mic_thread = threading.Thread(target=self._mic_record_worker, daemon=True)
         self._mic_thread.start()
 
@@ -2119,11 +2360,17 @@ class MainWindow(QMainWindow):
         try:
             import speech_recognition as sr
         except ImportError:
-            self.log.error("speech_recognition nicht installiert: pip install SpeechRecognition")
+            self.log.error(
+                "speech_recognition nicht installiert: pip install SpeechRecognition"
+            )
             from PyQt6.QtCore import QMetaObject, Q_ARG
-            QMetaObject.invokeMethod(self, "_mic_error",
-                                     Qt.ConnectionType.QueuedConnection,
-                                     Q_ARG(str, "❌ Bitte installieren: pip install SpeechRecognition"))
+
+            QMetaObject.invokeMethod(
+                self,
+                "_mic_error",
+                Qt.ConnectionType.QueuedConnection,
+                Q_ARG(str, "❌ Bitte installieren: pip install SpeechRecognition"),
+            )
             self.mic_recording = False
             return
 
@@ -2152,14 +2399,22 @@ class MainWindow(QMainWindow):
             if text and text.strip():
                 # Text im Main Thread ins Input-Feld setzen und senden
                 from PyQt6.QtCore import QMetaObject, Q_ARG
-                QMetaObject.invokeMethod(self, "_mic_result",
-                                         Qt.ConnectionType.QueuedConnection,
-                                         Q_ARG(str, text))
+
+                QMetaObject.invokeMethod(
+                    self,
+                    "_mic_result",
+                    Qt.ConnectionType.QueuedConnection,
+                    Q_ARG(str, text),
+                )
             else:
                 from PyQt6.QtCore import QMetaObject, Q_ARG
-                QMetaObject.invokeMethod(self, "_mic_error",
-                                         Qt.ConnectionType.QueuedConnection,
-                                         Q_ARG(str, "🎤 Nichts erkannt — bitte nochmal versuchen"))
+
+                QMetaObject.invokeMethod(
+                    self,
+                    "_mic_error",
+                    Qt.ConnectionType.QueuedConnection,
+                    Q_ARG(str, "🎤 Nichts erkannt — bitte nochmal versuchen"),
+                )
 
         except Exception as e:
             error_msg = str(e)
@@ -2167,7 +2422,11 @@ class MainWindow(QMainWindow):
 
             if "Could not understand" in error_msg or "UnknownValueError" in error_msg:
                 display = "🎤 Konnte dich nicht verstehen — bitte nochmal versuchen"
-            elif "Microphone" in error_msg or "ALSA" in error_msg or "No Default" in error_msg:
+            elif (
+                "Microphone" in error_msg
+                or "ALSA" in error_msg
+                or "No Default" in error_msg
+            ):
                 display = "❌ Kein Mikrofon gefunden. Prüfe deine Audio-Einstellungen."
             elif "timed out" in error_msg.lower():
                 display = "🎤 Timeout — kein Sprechen erkannt"
@@ -2175,16 +2434,22 @@ class MainWindow(QMainWindow):
                 display = f"🎤 Fehler: {error_msg[:80]}"
 
             from PyQt6.QtCore import QMetaObject, Q_ARG
-            QMetaObject.invokeMethod(self, "_mic_error",
-                                     Qt.ConnectionType.QueuedConnection,
-                                     Q_ARG(str, display))
+
+            QMetaObject.invokeMethod(
+                self,
+                "_mic_error",
+                Qt.ConnectionType.QueuedConnection,
+                Q_ARG(str, display),
+            )
 
         finally:
             self.mic_recording = False
             # Reset Button im Main Thread
             from PyQt6.QtCore import QMetaObject
-            QMetaObject.invokeMethod(self, "_stop_mic",
-                                     Qt.ConnectionType.QueuedConnection)
+
+            QMetaObject.invokeMethod(
+                self, "_stop_mic", Qt.ConnectionType.QueuedConnection
+            )
 
     @pyqtSlot(str)
     def _mic_result(self, text: str):
@@ -2201,30 +2466,23 @@ class MainWindow(QMainWindow):
     # ══ Sidebar ═══════════════════════════════════════════════
 
     def _show_routing_hint(self, text: str):
-        try:
-            self.chat_display.append(f"<i style='color:#888;font-size:11px;'>{text}</i>")
-        except Exception:
-            pass
+        # FIX: chat_display existiert nicht → _append_message verwenden
+        self._append_message("system", text)
 
     def _show_monitor_notification(self, title: str, message: str):
+        # FIX: chat_display existiert nicht → _append_message verwenden
+        self._append_message("system", f"🛰 {title}: {message[:200]}")
         try:
-            html = (f"<div style='background:rgba(233,69,96,0.12);border-left:3px solid #e94560;"
-                    f"padding:8px 12px;margin:4px 0;border-radius:4px;'>"
-                    f"<b style='color:#e94560;'>{title}</b><br>"
-                    f"<span style='color:rgba(255,255,255,0.8);font-size:12px;'>{message}</span></div>")
-            self.chat_display.append(html)
-        except Exception:
-            pass
-        try:
-            if hasattr(self, 'tray') and self.tray:
-                self.tray.showMessage(title, message[:200])
+            if hasattr(self, "tray_icon") and self.tray_icon:
+                self.tray_icon.show_notification(title, message[:200])
         except Exception:
             pass
 
     def _open_monitor_window(self):
         if not hasattr(self, "_monitor_window") or self._monitor_window is None:
             self._monitor_window = MonitorWindow(
-                monitor_engine=getattr(self, "monitor_engine", None), parent=self)
+                monitor_engine=getattr(self, "monitor_engine", None), parent=self
+            )
         self._monitor_window.refresh()
         self._monitor_window.show()
         self._monitor_window.raise_()
@@ -2255,32 +2513,44 @@ class MainWindow(QMainWindow):
         self.history_list.clear()
         import os
         from datetime import datetime
-        sessions_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sessions")
+
+        sessions_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data",
+            "sessions",
+        )
         os.makedirs(sessions_dir, exist_ok=True)
         files = sorted(
-            [f for f in os.listdir(sessions_dir) if f.endswith(".json")],
-            reverse=True
+            [f for f in os.listdir(sessions_dir) if f.endswith(".json")], reverse=True
         )
         for fname in files[:50]:
             path = os.path.join(sessions_dir, fname)
             try:
                 import json
+
                 with open(path) as f:
                     data = json.load(f)
                 title = data.get("title", "")
-                ts    = data.get("saved_at", "")
+                ts = data.get("saved_at", "")
                 # Wenn Titel wie Dateiname aussieht oder leer, ersten User-Message nehmen
                 if not title or title.startswith("session_") or title == "Chat":
                     for msg in data.get("messages", []):
                         if msg.get("role") == "user":
                             c = msg.get("content", "")
                             if isinstance(c, list):
-                                c = next((p.get("text","") for p in c if isinstance(p,dict)), "")
+                                c = next(
+                                    (
+                                        p.get("text", "")
+                                        for p in c
+                                        if isinstance(p, dict)
+                                    ),
+                                    "",
+                                )
                             if c.strip():
                                 title = c.strip()[:55]
                                 break
                 if not title:
-                    title = fname.replace(".json","")
+                    title = fname.replace(".json", "")
                 if ts:
                     try:
                         dt = datetime.fromisoformat(ts)
@@ -2303,6 +2573,7 @@ class MainWindow(QMainWindow):
             return
         try:
             import json
+
             with open(path) as f:
                 data = json.load(f)
             messages = data.get("messages", [])
@@ -2326,7 +2597,9 @@ class MainWindow(QMainWindow):
                 if not content_text.strip():
                     continue
                 # System-Nachrichten überspringen (interne Tool-Results etc.)
-                if content_text.startswith("[SYSTEM]") or content_text.startswith("[MORUK"):
+                if content_text.startswith("[SYSTEM]") or content_text.startswith(
+                    "[MORUK"
+                ):
                     continue
                 if role == "user":
                     self._append_message("user", content_text[:500])
@@ -2352,6 +2625,7 @@ class MainWindow(QMainWindow):
         try:
             import json, os
             from datetime import datetime
+
             history = self.brain.conversation_history
             if len(history) < 2:
                 return
@@ -2359,12 +2633,19 @@ class MainWindow(QMainWindow):
             title = "Chat"
             for msg in history:
                 if msg.get("role") == "user":
-                    content = msg.get("content","")
+                    content = msg.get("content", "")
                     if isinstance(content, list):
-                        content = next((p.get("text","") for p in content if isinstance(p,dict)), "")
+                        content = next(
+                            (p.get("text", "") for p in content if isinstance(p, dict)),
+                            "",
+                        )
                     title = content[:60].strip() or "Chat"
                     break
-            sessions_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sessions")
+            sessions_dir = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "data",
+                "sessions",
+            )
             os.makedirs(sessions_dir, exist_ok=True)
             ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             path = os.path.join(sessions_dir, f"{ts}.json")
@@ -2373,18 +2654,23 @@ class MainWindow(QMainWindow):
             for msg in history[-100:]:
                 c = msg.get("content", "")
                 if isinstance(c, list):
-                    c = next((p.get("text","") for p in c if isinstance(p,dict)), "")
+                    c = next((p.get("text", "") for p in c if isinstance(p, dict)), "")
                 if str(c).startswith("[SYSTEM]") or str(c).startswith("[MORUK"):
                     continue
                 if msg.get("role") not in ("user", "assistant"):
                     continue
                 clean_messages.append(msg)
             with open(path, "w", encoding="utf-8") as f:
-                json.dump({
-                    "title":    title,
-                    "saved_at": datetime.now().isoformat(),
-                    "messages": clean_messages
-                }, f, indent=2, ensure_ascii=False)
+                json.dump(
+                    {
+                        "title": title,
+                        "saved_at": datetime.now().isoformat(),
+                        "messages": clean_messages,
+                    },
+                    f,
+                    indent=2,
+                    ensure_ascii=False,
+                )
         except Exception as e:
             self.log.warning(f"Session save failed: {e}")
 
@@ -2404,7 +2690,9 @@ class MainWindow(QMainWindow):
             self.brain.save_settings(new_settings)
 
             # Status Message
-            parts = [f"Provider: {new_settings.get('provider', '?')} | Model: {new_settings.get('model', '?')}"]
+            parts = [
+                f"Provider: {new_settings.get('provider', '?')} | Model: {new_settings.get('model', '?')}"
+            ]
             if new_settings.get("deepthink_model"):
                 parts.append(f"DeepThink: {new_settings['deepthink_model']}")
             if new_settings.get("vision_model"):
@@ -2418,9 +2706,8 @@ class MainWindow(QMainWindow):
 
     def _update_status(self, text: str):
         self.status_label.setText(text)
-        if hasattr(self, 'tray_icon'):
+        if hasattr(self, "tray_icon"):
             self.tray_icon.update_status(text)
-
 
     # ══ Watchdog Alert ════════════════════════════════════════
 
@@ -2429,7 +2716,7 @@ class MainWindow(QMainWindow):
         self._append_message("system", f"🛡️ WATCHDOG: {message}")
 
         # Tray-Notification für Watchdog-Alerts
-        if hasattr(self, 'tray_icon'):
+        if hasattr(self, "tray_icon"):
             self.tray_icon.show_notification("⚠ Moruk Watchdog", message[:100])
 
         try:
@@ -2438,7 +2725,6 @@ class MainWindow(QMainWindow):
             self._active_alerts.append(alert)
         except Exception as e:
             self.log.error(f"Failed to show alert window: {e}")
-            
 
     def _on_heartbeat_failure(self, name: str, reason: str):
         """Vom Heartbeat-Thread aufgerufen — leitet via Signal in Main-Thread weiter."""
@@ -2469,7 +2755,6 @@ class MainWindow(QMainWindow):
         # Session speichern beim Schließen
         try:
             self._save_current_session()
-            self._load_chat_history()
         except Exception:
             pass
 
@@ -2480,11 +2765,11 @@ class MainWindow(QMainWindow):
             pass
 
         # Heartbeat stoppen
-        if hasattr(self, 'heartbeat'):
+        if hasattr(self, "heartbeat"):
             self.heartbeat.stop()
 
         # Tray Icon entfernen
-        if hasattr(self, 'tray_icon'):
+        if hasattr(self, "tray_icon"):
             self.tray_icon.hide()
 
         # Autonomy stoppen
@@ -2493,7 +2778,7 @@ class MainWindow(QMainWindow):
             self.autonomy.wait(3000)
 
         # ProjectManager stoppen falls aktiv
-        if hasattr(self, 'project_manager') and self.project_manager.is_running:
+        if hasattr(self, "project_manager") and self.project_manager.is_running:
             self.project_manager.stop()
 
         # Worker Thread sauber beenden

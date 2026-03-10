@@ -1,14 +1,25 @@
 """
-Moruk AI OS - Sidebar
+Moruk AI OS - Sidebar v5.1
 Tabs: Tasks, Memory, Reflections, Goals, Stats
 Live-Aktualisierung der Daten.
 Subtask-Anzeige mit Einrückung + Projekt-Fortschrittsbalken.
+
+v5.1 Fixes:
+- db_size_kb wird jetzt korrekt angezeigt (war immer 0)
+- Token Usage Sektion im Stats-Tab (API Calls, Total Tokens)
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
-    QListWidget, QListWidgetItem, QLabel, QPushButton,
-    QProgressBar, QTextEdit
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QTabWidget,
+    QListWidget,
+    QListWidgetItem,
+    QLabel,
+    QPushButton,
+    QProgressBar,
+    QTextEdit,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QColor, QFont
@@ -25,8 +36,17 @@ log = get_logger("sidebar")
 class Sidebar(QWidget):
     """Sidebar mit Tabs für Tasks, Memory, Reflections, Goals, Stats."""
 
-    def __init__(self, tasks: TaskManager, memory: Memory,
-                 reflector: Reflector, state: StateManager, goal_engine=None, self_model=None, main_window=None, parent=None):
+    def __init__(
+        self,
+        tasks: TaskManager,
+        memory: Memory,
+        reflector: Reflector,
+        state: StateManager,
+        goal_engine=None,
+        self_model=None,
+        main_window=None,
+        parent=None,
+    ):
         super().__init__(parent)
         self._main_window = main_window
         self.tasks = tasks
@@ -110,7 +130,9 @@ class Sidebar(QWidget):
 
         self.project_title_label = QLabel("")
         self.project_title_label.setObjectName("sidebarStat")
-        self.project_title_label.setStyleSheet("color: #ffa500; font-weight: bold; font-size: 11px;")
+        self.project_title_label.setStyleSheet(
+            "color: #ffa500; font-weight: bold; font-size: 11px;"
+        )
         progress_layout.addWidget(self.project_title_label)
 
         progress_bar_layout = QHBoxLayout()
@@ -154,8 +176,14 @@ class Sidebar(QWidget):
         self._show_all_tasks = False
         return widget
 
-    def _make_task_widget(self, text: str, task_id: str, color: str,
-                           bold: bool = False, small: bool = False) -> QWidget:
+    def _make_task_widget(
+        self,
+        text: str,
+        task_id: str,
+        color: str,
+        bold: bool = False,
+        small: bool = False,
+    ) -> QWidget:
         """Erstellt ein Task-Widget mit Text + X-Button."""
         widget = QWidget()
         widget.setStyleSheet("background: transparent;")
@@ -213,14 +241,14 @@ class Sidebar(QWidget):
             "critical": "#ff4444",
             "high": "#e94560",
             "normal": "#00d2ff",
-            "low": "#666"
+            "low": "#666",
         }
 
         status_icons = {
             "pending": "⏳",
             "active": "🔄",
             "completed": "✅",
-            "failed": "❌"
+            "failed": "❌",
         }
 
         for task in all_tasks:
@@ -249,14 +277,19 @@ class Sidebar(QWidget):
             item = QListWidgetItem()
             item.setData(Qt.ItemDataRole.UserRole, task["id"])
             self.task_list.addItem(item)
-            widget = self._make_task_widget(text, task["id"], priority_color, bold=is_project)
+            widget = self._make_task_widget(
+                text, task["id"], priority_color, bold=is_project
+            )
             item.setSizeHint(widget.sizeHint())
             self.task_list.setItemWidget(item, widget)
 
             if is_project:
                 subtasks = self.tasks.get_subtasks(task["id"])
                 for sub in subtasks:
-                    if not self._show_all_tasks and sub["status"] not in ("pending", "active"):
+                    if not self._show_all_tasks and sub["status"] not in (
+                        "pending",
+                        "active",
+                    ):
                         continue
 
                     sub_icon = status_icons.get(sub["status"], "❓")
@@ -276,7 +309,9 @@ class Sidebar(QWidget):
                     sub_item = QListWidgetItem()
                     sub_item.setData(Qt.ItemDataRole.UserRole, sub["id"])
                     self.task_list.addItem(sub_item)
-                    sub_widget = self._make_task_widget(sub_text, sub["id"], sub_color, small=True)
+                    sub_widget = self._make_task_widget(
+                        sub_text, sub["id"], sub_color, small=True
+                    )
                     sub_item.setSizeHint(sub_widget.sizeHint())
                     self.task_list.setItemWidget(sub_item, sub_widget)
 
@@ -287,8 +322,10 @@ class Sidebar(QWidget):
         # Finde aktives Projekt (Parent-Task mit Subtasks, Status active/pending)
         active_project = None
         for task in self.tasks.tasks:
-            if (len(task.get("subtasks", [])) > 0 and
-                    task["status"] in ("pending", "active")):
+            if len(task.get("subtasks", [])) > 0 and task["status"] in (
+                "pending",
+                "active",
+            ):
                 active_project = task
                 break
 
@@ -371,8 +408,9 @@ class Sidebar(QWidget):
         self.memory_list.clear()
         stats = self.memory.get_stats()
         db_size = stats.get("db_size_kb", 0)
+        size_str = f" ({db_size:.0f}KB)" if db_size > 0 else ""
         self.memory_count_label.setText(
-            f"{stats['long_term_count']} memories ({db_size}KB)"
+            f"{stats['long_term_count']} memories{size_str}"
         )
 
         category_colors = {
@@ -381,7 +419,7 @@ class Sidebar(QWidget):
             "project": "#ffa500",
             "discovery": "#44ff44",
             "reflection": "#ffa500",
-            "general": "#888"
+            "general": "#888",
         }
 
         # Letzte 30 Long-Term Memories
@@ -509,7 +547,7 @@ class Sidebar(QWidget):
             "active": "🔄",
             "completed": "✅",
             "failed": "❌",
-            "discarded": "🗑"
+            "discarded": "🗑",
         }
 
         status_colors = {
@@ -517,7 +555,7 @@ class Sidebar(QWidget):
             "active": "#44ff44",
             "completed": "#666",
             "failed": "#e94560",
-            "discarded": "#444"
+            "discarded": "#444",
         }
 
         for goal in goals[-20:]:
@@ -573,11 +611,28 @@ class Sidebar(QWidget):
         lines.append("═══ MEMORY ═══")
         lines.append(f"  Short-term: {mem_stats['short_term_count']} entries")
         lines.append(f"  Long-term: {mem_stats['long_term_count']} entries")
+        db_size = mem_stats.get("db_size_kb", 0)
+        if db_size > 0:
+            lines.append(f"  DB Size: {db_size:.1f} KB")
         if mem_stats["categories"]:
             lines.append(f"  Categories: {', '.join(mem_stats['categories'])}")
         if mem_stats["all_tags"]:
             lines.append(f"  Tags: {', '.join(mem_stats['all_tags'][:15])}")
         lines.append("")
+
+        # Token Usage (v5.1: aus Brain holen via MainWindow)
+        if self._main_window and hasattr(self._main_window, "brain"):
+            try:
+                token_stats = self._main_window.brain.get_token_stats()
+                if token_stats.get("calls", 0) > 0:
+                    lines.append("═══ TOKEN USAGE ═══")
+                    lines.append(f"  API Calls: {token_stats.get('calls', 0)}")
+                    lines.append(f"  Total Tokens: {token_stats.get('total_tokens', 0):,}")
+                    lines.append(f"  Input: {token_stats.get('total_input', 0):,}")
+                    lines.append(f"  Output: {token_stats.get('total_output', 0):,}")
+                    lines.append("")
+            except Exception:
+                pass
 
         # Tasks (erweitert mit Projekt-Info)
         active = self.tasks.get_active_tasks()

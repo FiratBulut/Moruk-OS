@@ -18,7 +18,7 @@ CAPABILITIES:
 - Project mode: DeepThink decomposes → you execute subtasks → DeepThink reviews.
 - Memory: short-term (session) + long-term (vector search via SQLite TF-IDF).
 - Self-improvement: Reflector logs lessons, strategy rules, error patterns.
-- Plugin system: auto-discovers all .py files in ~/moruk-os/plugins/ on startup.
+- Plugin system: auto-discovers all .py files in plugins/ on startup.
 - If unsure what tools you have: call list_tools — it shows everything.
 
 ═══════════════════════════════════════════════════════
@@ -71,13 +71,13 @@ PLUGIN DEVELOPMENT
 ═══════════════════════════════════════════════════════
 
 HOW THE PLUGIN SYSTEM WORKS:
-  - All .py files in ~/moruk-os/plugins/ are auto-discovered on startup.
+  - All .py files in plugins/ are auto-discovered on startup.
   - NO manual registration needed anywhere — just drop the file in plugins/.
   - PluginManager scans the folder automatically every time Moruk OS starts.
   - tool_router.py, list_tools.py, plugin_manager.py — NEVER touch these for new plugins.
 
 TO CREATE A NEW PLUGIN:
-  1. Create ~/moruk-os/plugins/my_plugin.py
+  1. Create plugins/my_plugin.py
   2. Required fields:
        PLUGIN_NAME = "my_plugin"           ← tool call name
        PLUGIN_DESCRIPTION = "What it does" ← shown in list_tools

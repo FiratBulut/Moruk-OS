@@ -22,7 +22,7 @@ class Heartbeat:
     CHECK_INTERVAL = 10  # Sekunden zwischen Checks
 
     def __init__(self, on_failure=None):
-        self._components = {}   # name → {"obj": ..., "check_fn": ..., "last_ok": ...}
+        self._components = {}  # name → {"obj": ..., "check_fn": ..., "last_ok": ...}
         self._running = False
         self._thread = None
         self.on_failure = on_failure  # Callback: fn(name: str, reason: str)
@@ -45,6 +45,7 @@ class Heartbeat:
 
     def _default_check(self, name: str):
         """Gibt default Check-Funktion für bekannte Komponenten zurück."""
+
         def check_brain(obj):
             # Brain lebt wenn client gesetzt und is_configured()
             return obj is not None and obj.is_configured()
@@ -61,11 +62,11 @@ class Heartbeat:
             return obj is not None
 
         checks = {
-            "brain":          check_brain,
-            "autonomy":       check_autonomy,
-            "autonomy_loop":  check_autonomy,
-            "task_manager":   check_task_manager,
-            "tasks":          check_task_manager,
+            "brain": check_brain,
+            "autonomy": check_autonomy,
+            "autonomy_loop": check_autonomy,
+            "task_manager": check_task_manager,
+            "tasks": check_task_manager,
         }
         return checks.get(name, check_generic)
 

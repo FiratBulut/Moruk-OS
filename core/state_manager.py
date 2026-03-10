@@ -21,7 +21,7 @@ class StateManager:
 
     DEFAULT_STATE = {
         "identity": "Moruk",
-        "mode": "idle",           # idle, working, thinking, reflecting
+        "mode": "idle",  # idle, working, thinking, reflecting
         "current_goal": None,
         "active_task": None,
         "last_action": None,
@@ -30,7 +30,7 @@ class StateManager:
         "total_interactions": 0,
         "created_at": None,
         "last_active": None,
-        "uptime_sessions": []
+        "uptime_sessions": [],
     }
 
     def __init__(self):
@@ -73,10 +73,12 @@ class StateManager:
         """Registriert einen neuen App-Start."""
         self.state["session_count"] += 1
         self.state["last_active"] = datetime.now().isoformat()
-        self.state["uptime_sessions"].append({
-            "started": datetime.now().isoformat(),
-            "session_number": self.state["session_count"]
-        })
+        self.state["uptime_sessions"].append(
+            {
+                "started": datetime.now().isoformat(),
+                "session_number": self.state["session_count"],
+            }
+        )
         self.state["uptime_sessions"] = self.state["uptime_sessions"][-20:]
         self._save_state()
 

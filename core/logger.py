@@ -15,21 +15,22 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 LOG_DIR = DATA_DIR / "logs"
 
 # Max 5MB pro Log-Datei, max 3 Backup-Dateien = max ~20MB total
-MAX_LOG_BYTES = 5 * 1024 * 1024   # 5 MB
+MAX_LOG_BYTES = 5 * 1024 * 1024  # 5 MB
 LOG_BACKUP_COUNT = 3
 
 # Patterns für sensitive Daten die nie geloggt werden dürfen
 _SENSITIVE_PATTERNS = [
-    (re.compile(r'(sk-[a-zA-Z0-9]{20,})', re.IGNORECASE), '***API_KEY***'),
-    (re.compile(r'(Bearer\s+[a-zA-Z0-9\-._~+/]+=*)', re.IGNORECASE), 'Bearer ***'),
-    (re.compile(r'("api_key"\s*:\s*")[^"]+(")', re.IGNORECASE), r'\1***\2'),
-    (re.compile(r'("password"\s*:\s*")[^"]+(")', re.IGNORECASE), r'\1***\2'),
-    (re.compile(r'("token"\s*:\s*")[^"]+(")', re.IGNORECASE), r'\1***\2'),
+    (re.compile(r"(sk-[a-zA-Z0-9]{20,})", re.IGNORECASE), "***API_KEY***"),
+    (re.compile(r"(Bearer\s+[a-zA-Z0-9\-._~+/]+=*)", re.IGNORECASE), "Bearer ***"),
+    (re.compile(r'("api_key"\s*:\s*")[^"]+(")', re.IGNORECASE), r"\1***\2"),
+    (re.compile(r'("password"\s*:\s*")[^"]+(")', re.IGNORECASE), r"\1***\2"),
+    (re.compile(r'("token"\s*:\s*")[^"]+(")', re.IGNORECASE), r"\1***\2"),
 ]
 
 
 class SensitiveDataFilter(logging.Filter):
     """Filtert API Keys und Passwörter aus Log-Einträgen."""
+
     def filter(self, record: logging.LogRecord) -> bool:
         msg = str(record.getMessage())
         for pattern, replacement in _SENSITIVE_PATTERNS:
@@ -54,16 +55,12 @@ def setup_logger() -> logging.Logger:
     # Rotating File Handler — max 5MB, 3 Backups
     log_file = LOG_DIR / "moruk.log"
     file_handler = logging.handlers.RotatingFileHandler(
-        log_file,
-        maxBytes=MAX_LOG_BYTES,
-        backupCount=LOG_BACKUP_COUNT,
-        encoding="utf-8"
+        log_file, maxBytes=MAX_LOG_BYTES, backupCount=LOG_BACKUP_COUNT, encoding="utf-8"
     )
     file_handler.setLevel(logging.DEBUG)
     file_handler.addFilter(sensitive_filter)
     file_format = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%H:%M:%S"
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S"
     )
     file_handler.setFormatter(file_format)
     logger.addHandler(file_handler)
@@ -96,7 +93,7 @@ def install_crash_handler(logger: logging.Logger):
             if crash_log.exists() and crash_log.stat().st_size > 1 * 1024 * 1024:
                 # Ältere Hälfte wegwerfen
                 content = crash_log.read_text(encoding="utf-8", errors="replace")
-                crash_log.write_text(content[len(content)//2:], encoding="utf-8")
+                crash_log.write_text(content[len(content) // 2 :], encoding="utf-8")
             with open(crash_log, "a", encoding="utf-8") as f:
                 f.write(f"\n{'='*60}\n")
                 f.write(f"CRASH: {datetime.now().isoformat()}\n")

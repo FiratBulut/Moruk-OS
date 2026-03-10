@@ -18,19 +18,20 @@ PLUGIN_DESCRIPTION = "Überwacht Prozesse und Crashes. Sendet Alerts bei Problem
 PLUGIN_PARAMS = {
     "action": "start|stop|status|check|list_crashes",
     "process": "Prozessname zum Überwachen (optional)",
-    "interval": "Check-Intervall in Sekunden (default: 30)"
+    "interval": "Check-Intervall in Sekunden (default: 30)",
 }
 
 # Globaler Watchdog-State
 _watchdog_thread = None
 _watchdog_running = False
-_watched_processes = {}   # name -> {pid, start_time, crash_count}
-_crash_log = []           # Liste der erkannten Crashes
-_alert_callback = None    # Callback: fn(title, message, problem_id)
+_watched_processes = {}  # name -> {pid, start_time, crash_count}
+_crash_log = []  # Liste der erkannten Crashes
+_alert_callback = None  # Callback: fn(title, message, problem_id)
 _check_interval = 30
 
 # Log-Datei
-CRASH_LOG_PATH = os.path.expanduser("~/moruk-os/data/crash_log.json")
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+CRASH_LOG_PATH = os.path.join(BASE_DIR, "data", "crash_log.json")
 
 
 def set_alert_callback(callback):
@@ -48,10 +49,10 @@ def _send_alert(title: str, message: str, problem_id: str = ""):
     else:
         # Fallback: Desktop-Notification
         try:
-            subprocess.run([
-                "notify-send", "-u", "critical",
-                f"Moruk OS: {title}", message
-            ], timeout=5)
+            subprocess.run(
+                ["notify-send", "-u", "critical", f"Moruk OS: {title}", message],
+                timeout=5,
+            )
         except Exception:
             pass
 
@@ -62,7 +63,7 @@ def _log_crash(process_name: str, pid: int, reason: str):
         "time": datetime.now().isoformat(),
         "process": process_name,
         "pid": pid,
-        "reason": reason
+        "reason": reason,
     }
     _crash_log.append(entry)
 
@@ -89,29 +90,35 @@ def _check_system_health():
     # RAM-Check
     ram = psutil.virtual_memory()
     if ram.percent > 90:
-        alerts.append({
-            "title": "⚠️ RAM kritisch",
-            "message": f"RAM-Auslastung bei {ram.percent:.0f}%!\nNur noch {ram.available // 1024 // 1024} MB frei.",
-            "problem_id": "high_ram"
-        })
+        alerts.append(
+            {
+                "title": "⚠️ RAM kritisch",
+                "message": f"RAM-Auslastung bei {ram.percent:.0f}%!\nNur noch {ram.available // 1024 // 1024} MB frei.",
+                "problem_id": "high_ram",
+            }
+        )
 
     # Disk-Check
     disk = psutil.disk_usage("/")
     if disk.percent > 90:
-        alerts.append({
-            "title": "⚠️ Festplatte fast voll",
-            "message": f"Festplatte zu {disk.percent:.0f}% voll!\nNur noch {disk.free // 1024 // 1024 // 1024} GB frei.",
-            "problem_id": "disk_full"
-        })
+        alerts.append(
+            {
+                "title": "⚠️ Festplatte fast voll",
+                "message": f"Festplatte zu {disk.percent:.0f}% voll!\nNur noch {disk.free // 1024 // 1024 // 1024} GB frei.",
+                "problem_id": "disk_full",
+            }
+        )
 
     # CPU-Check (über 5 Sekunden gemessen)
     cpu = psutil.cpu_percent(interval=2)
     if cpu > 95:
-        alerts.append({
-            "title": "⚠️ CPU überlastet",
-            "message": f"CPU-Auslastung bei {cpu:.0f}%!\nSystem könnte einfrieren.",
-            "problem_id": "high_cpu"
-        })
+        alerts.append(
+            {
+                "title": "⚠️ CPU überlastet",
+                "message": f"CPU-Auslastung bei {cpu:.0f}%!\nSystem könnte einfrieren.",
+                "problem_id": "high_cpu",
+            }
+        )
 
     return alerts
 
@@ -131,12 +138,14 @@ def _check_watched_processes():
                 _watched_processes[name]["crash_count"] = info.get("crash_count", 0) + 1
                 _watched_processes[name]["pid"] = None
                 _log_crash(name, pid, "process_not_found")
-                alerts.append({
-                    "title": f"💥 Prozess gecrasht: {name}",
-                    "message": f"Der Prozess '{name}' (PID {pid}) ist nicht mehr aktiv.\n"
-                               f"Crash #{_watched_processes[name]['crash_count']} erkannt.",
-                    "problem_id": f"crash_{name}"
-                })
+                alerts.append(
+                    {
+                        "title": f"💥 Prozess gecrasht: {name}",
+                        "message": f"Der Prozess '{name}' (PID {pid}) ist nicht mehr aktiv.\n"
+                        f"Crash #{_watched_processes[name]['crash_count']} erkannt.",
+                        "problem_id": f"crash_{name}",
+                    }
+                )
     return alerts
 
 
@@ -174,10 +183,7 @@ def start_watchdog(interval: int = 30):
     _check_interval = interval
     _watchdog_running = True
     _watchdog_thread = threading.Thread(
-        target=_watchdog_loop,
-        args=(interval,),
-        daemon=True,
-        name="MorukWatchdog"
+        target=_watchdog_loop, args=(interval,), daemon=True, name="MorukWatchdog"
     )
     _watchdog_thread.start()
     return {"success": True, "result": f"Watchdog gestartet (Intervall: {interval}s)"}
@@ -202,7 +208,7 @@ def watch_process(name: str, pid: int = None):
     _watched_processes[name] = {
         "pid": pid,
         "start_time": datetime.now().isoformat(),
-        "crash_count": 0
+        "crash_count": 0,
     }
     return {"success": True, "result": f"Überwache '{name}' (PID: {pid})"}
 
@@ -229,12 +235,9 @@ def execute(params: dict) -> dict:
             "interval": _check_interval,
             "watched_processes": len(_watched_processes),
             "total_crashes_detected": len(_crash_log),
-            "processes": _watched_processes
+            "processes": _watched_processes,
         }
-        return {
-            "success": True,
-            "result": json.dumps(status, indent=2, default=str)
-        }
+        return {"success": True, "result": json.dumps(status, indent=2, default=str)}
 
     elif action == "check":
         # Sofortiger Check
@@ -244,16 +247,16 @@ def execute(params: dict) -> dict:
         if alerts:
             for a in alerts:
                 _send_alert(a["title"], a["message"], a["problem_id"])
-            return {"success": True, "result": f"{len(alerts)} Probleme gefunden und gemeldet."}
+            return {
+                "success": True,
+                "result": f"{len(alerts)} Probleme gefunden und gemeldet.",
+            }
         return {"success": True, "result": "Alles OK. Keine Probleme gefunden."}
 
     elif action == "list_crashes":
         if not _crash_log:
             return {"success": True, "result": "Keine Crashes aufgezeichnet."}
-        return {
-            "success": True,
-            "result": json.dumps(_crash_log[-10:], indent=2)
-        }
+        return {"success": True, "result": json.dumps(_crash_log[-10:], indent=2)}
 
     else:
         return {"success": False, "result": f"Unbekannte Action: {action}"}

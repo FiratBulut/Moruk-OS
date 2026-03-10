@@ -11,7 +11,7 @@ import json
 import os
 import re
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import Counter
 from core.logger import get_logger
 
@@ -34,20 +34,87 @@ class UserProfileEngine:
 
     # Aufgaben-Kategorien mit Keywords
     TASK_CATEGORIES = {
-        "coding":       ["code", "python", "plugin", "script", "function", "bug", "fix",
-                         "write", "implement", "class", "def ", "import", "error", "syntax"],
-        "research":     ["search", "find", "what is", "explain", "how does", "research",
-                         "suche", "erkläre", "was ist", "wie funktioniert"],
-        "system":       ["system", "health", "check", "monitor", "cpu", "ram", "disk",
-                         "process", "install", "update", "repair"],
-        "creative":     ["create", "generate", "image", "video", "design", "write story",
-                         "erstelle", "generiere", "schreib"],
-        "organization": ["task", "goal", "plan", "organize", "schedule", "todo",
-                         "aufgabe", "plane", "organisiere"],
-        "analysis":     ["analyze", "review", "check", "compare", "evaluate",
-                         "analysiere", "prüfe", "vergleiche"],
-        "automation":   ["automate", "loop", "run automatically", "schedule",
-                         "automatisiere", "lauf automatisch"],
+        "coding": [
+            "code",
+            "python",
+            "plugin",
+            "script",
+            "function",
+            "bug",
+            "fix",
+            "write",
+            "implement",
+            "class",
+            "def ",
+            "import",
+            "error",
+            "syntax",
+        ],
+        "research": [
+            "search",
+            "find",
+            "what is",
+            "explain",
+            "how does",
+            "research",
+            "suche",
+            "erkläre",
+            "was ist",
+            "wie funktioniert",
+        ],
+        "system": [
+            "system",
+            "health",
+            "check",
+            "monitor",
+            "cpu",
+            "ram",
+            "disk",
+            "process",
+            "install",
+            "update",
+            "repair",
+        ],
+        "creative": [
+            "create",
+            "generate",
+            "image",
+            "video",
+            "design",
+            "write story",
+            "erstelle",
+            "generiere",
+            "schreib",
+        ],
+        "organization": [
+            "task",
+            "goal",
+            "plan",
+            "organize",
+            "schedule",
+            "todo",
+            "aufgabe",
+            "plane",
+            "organisiere",
+        ],
+        "analysis": [
+            "analyze",
+            "review",
+            "check",
+            "compare",
+            "evaluate",
+            "analysiere",
+            "prüfe",
+            "vergleiche",
+        ],
+        "automation": [
+            "automate",
+            "loop",
+            "run automatically",
+            "schedule",
+            "automatisiere",
+            "lauf automatisch",
+        ],
     }
 
     # Explizite Präferenz-Patterns
@@ -83,29 +150,22 @@ class UserProfileEngine:
             "updated_at": datetime.now().isoformat(),
             "sessions_analyzed": 0,
             "total_messages": 0,
-
             # Sprache & Stil
             "language": {
-                "primary": "unknown",       # "de", "en", "mixed"
-                "formality": "neutral",     # "formal", "casual", "neutral"
-                "response_length": "medium" # "short", "medium", "detailed"
+                "primary": "unknown",  # "de", "en", "mixed"
+                "formality": "neutral",  # "formal", "casual", "neutral"
+                "response_length": "medium",  # "short", "medium", "detailed"
             },
-
             # Aufgaben-Verteilung
-            "task_distribution": {},        # category → count
-
+            "task_distribution": {},  # category → count
             # Häufige Themen/Keywords
-            "frequent_topics": {},          # word → count
-
+            "frequent_topics": {},  # word → count
             # Tageszeit-Muster
-            "activity_hours": {},           # "HH" → count
-
+            "activity_hours": {},  # "HH" → count
             # Explizite Präferenzen (vom User direkt geäußert)
-            "explicit_preferences": [],     # ["immer auf Deutsch antworten", ...]
-
+            "explicit_preferences": [],  # ["immer auf Deutsch antworten", ...]
             # Interessen-Domänen (hochrangig)
-            "domains": [],                  # ["AI/ML", "System Admin", ...]
-
+            "domains": [],  # ["AI/ML", "System Admin", ...]
             # Workflow-Präferenzen
             "workflow": {
                 "prefers_explanations": True,
@@ -113,9 +173,8 @@ class UserProfileEngine:
                 "prefers_step_by_step": False,
                 "asks_followups": False,
             },
-
             # Letzte Sessions (für Trending)
-            "recent_sessions": [],          # [{date, message_count, main_tasks}, ...]
+            "recent_sessions": [],  # [{date, message_count, main_tasks}, ...]
         }
 
     def _migrate(self, data: dict) -> dict:
@@ -150,8 +209,12 @@ class UserProfileEngine:
         if not messages:
             return
 
-        user_msgs = [m for m in messages if m.get("role") == "user"
-                     and not str(m.get("content", "")).startswith("<tool_results>")]
+        user_msgs = [
+            m
+            for m in messages
+            if m.get("role") == "user"
+            and not str(m.get("content", "")).startswith("<tool_results>")
+        ]
 
         if not user_msgs:
             return
@@ -196,7 +259,9 @@ class UserProfileEngine:
         # 8. Response Length Präferenz aus Assistant-Antworten
         assistant_msgs = [m for m in messages if m.get("role") == "assistant"]
         if assistant_msgs:
-            avg_len = sum(len(str(m.get("content", ""))) for m in assistant_msgs) / len(assistant_msgs)
+            avg_len = sum(len(str(m.get("content", ""))) for m in assistant_msgs) / len(
+                assistant_msgs
+            )
             if avg_len < 300:
                 self.profile["language"]["response_length"] = "short"
             elif avg_len < 1200:
@@ -206,11 +271,13 @@ class UserProfileEngine:
 
         # 9. Session-Summary speichern
         main_tasks = Counter(session_tasks).most_common(2)
-        self.profile["recent_sessions"].append({
-            "date": datetime.now().date().isoformat(),
-            "message_count": len(user_msgs),
-            "main_tasks": [t[0] for t in main_tasks],
-        })
+        self.profile["recent_sessions"].append(
+            {
+                "date": datetime.now().date().isoformat(),
+                "message_count": len(user_msgs),
+                "main_tasks": [t[0] for t in main_tasks],
+            }
+        )
         # Max 20 Sessions behalten
         self.profile["recent_sessions"] = self.profile["recent_sessions"][-20:]
 
@@ -218,12 +285,54 @@ class UserProfileEngine:
         log.info(f"User profile updated — session #{self.profile['sessions_analyzed']}")
 
     def _detect_language(self, text: str):
-        de_words = ["ich", "du", "er", "sie", "wir", "nicht", "und", "oder",
-                    "aber", "dass", "mit", "von", "ist", "sind", "war", "bitte",
-                    "danke", "mach", "zeig", "schreib", "erkläre", "kannst"]
-        en_words = ["i", "you", "he", "she", "we", "not", "and", "or",
-                    "but", "that", "with", "from", "is", "are", "was",
-                    "please", "thanks", "make", "show", "write", "explain", "can"]
+        de_words = [
+            "ich",
+            "du",
+            "er",
+            "sie",
+            "wir",
+            "nicht",
+            "und",
+            "oder",
+            "aber",
+            "dass",
+            "mit",
+            "von",
+            "ist",
+            "sind",
+            "war",
+            "bitte",
+            "danke",
+            "mach",
+            "zeig",
+            "schreib",
+            "erkläre",
+            "kannst",
+        ]
+        en_words = [
+            "i",
+            "you",
+            "he",
+            "she",
+            "we",
+            "not",
+            "and",
+            "or",
+            "but",
+            "that",
+            "with",
+            "from",
+            "is",
+            "are",
+            "was",
+            "please",
+            "thanks",
+            "make",
+            "show",
+            "write",
+            "explain",
+            "can",
+        ]
 
         words = text.split()
         de_count = sum(1 for w in words if w in de_words)
@@ -245,15 +354,71 @@ class UserProfileEngine:
     def _extract_topics(self, text: str):
         # Stopwords rausfiltern
         stopwords = {
-            "ich", "du", "er", "sie", "es", "wir", "ihr", "den", "dem", "des",
-            "ein", "eine", "der", "die", "das", "und", "oder", "aber", "nicht",
-            "mit", "von", "aus", "bei", "nach", "vor", "über", "unter",
-            "i", "you", "he", "she", "it", "we", "the", "a", "an", "and",
-            "or", "but", "not", "with", "from", "at", "by", "for", "in",
-            "is", "are", "was", "be", "to", "of", "that", "this", "have",
-            "bitte", "please", "kannst", "kann", "soll", "will", "mach", "make"
+            "ich",
+            "du",
+            "er",
+            "sie",
+            "es",
+            "wir",
+            "ihr",
+            "den",
+            "dem",
+            "des",
+            "ein",
+            "eine",
+            "der",
+            "die",
+            "das",
+            "und",
+            "oder",
+            "aber",
+            "nicht",
+            "mit",
+            "von",
+            "aus",
+            "bei",
+            "nach",
+            "vor",
+            "über",
+            "unter",
+            "i",
+            "you",
+            "he",
+            "she",
+            "it",
+            "we",
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "not",
+            "with",
+            "from",
+            "at",
+            "by",
+            "for",
+            "in",
+            "is",
+            "are",
+            "was",
+            "be",
+            "to",
+            "of",
+            "that",
+            "this",
+            "have",
+            "bitte",
+            "please",
+            "kannst",
+            "kann",
+            "soll",
+            "will",
+            "mach",
+            "make",
         }
-        words = re.findall(r'\b[a-zA-ZäöüÄÖÜß]{4,}\b', text.lower())
+        words = re.findall(r"\b[a-zA-ZäöüÄÖÜß]{4,}\b", text.lower())
         topics = self.profile["frequent_topics"]
         for word in words:
             if word not in stopwords:
@@ -274,21 +439,31 @@ class UserProfileEngine:
                     log.info(f"New explicit preference detected: {pref}")
 
         # Max 20 explizite Präferenzen
-        self.profile["explicit_preferences"] = self.profile["explicit_preferences"][-20:]
+        self.profile["explicit_preferences"] = self.profile["explicit_preferences"][
+            -20:
+        ]
 
     def _analyze_workflow_style(self, user_msgs: list):
         all_text = " ".join(str(m.get("content", "")) for m in user_msgs).lower()
 
         # Fragt er nach Erklärungen?
-        if any(w in all_text for w in ["erkläre", "explain", "warum", "why", "wie", "how"]):
+        if any(
+            w in all_text for w in ["erkläre", "explain", "warum", "why", "wie", "how"]
+        ):
             self.profile["workflow"]["prefers_explanations"] = True
 
         # Fragt er nach Code-Beispielen?
-        if any(w in all_text for w in ["beispiel", "example", "zeig mir", "show me", "code"]):
+        if any(
+            w in all_text
+            for w in ["beispiel", "example", "zeig mir", "show me", "code"]
+        ):
             self.profile["workflow"]["prefers_code_examples"] = True
 
         # Schritt-für-Schritt?
-        if any(w in all_text for w in ["schritt", "step by step", "nacheinander", "zuerst dann"]):
+        if any(
+            w in all_text
+            for w in ["schritt", "step by step", "nacheinander", "zuerst dann"]
+        ):
             self.profile["workflow"]["prefers_step_by_step"] = True
 
     def _update_domains(self):
@@ -309,7 +484,16 @@ class UserProfileEngine:
             domains.add("Automation")
 
         # Topics-basiert
-        ai_words = {"ai", "model", "llm", "neural", "machine", "learning", "plugin", "agent"}
+        ai_words = {
+            "ai",
+            "model",
+            "llm",
+            "neural",
+            "machine",
+            "learning",
+            "plugin",
+            "agent",
+        }
         if sum(topics.get(w, 0) for w in ai_words) > 5:
             domains.add("AI/ML")
 

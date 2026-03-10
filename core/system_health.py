@@ -39,6 +39,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 class HealthStatus:
     """Einzelnes Health-Check Ergebnis."""
+
     def __init__(self, name: str, healthy: bool, detail: str = "", action: str = ""):
         self.name = name
         self.healthy = healthy
@@ -50,7 +51,7 @@ class HealthStatus:
             "name": self.name,
             "healthy": self.healthy,
             "detail": self.detail,
-            "action": self.action
+            "action": self.action,
         }
 
 
@@ -109,14 +110,20 @@ class SystemHealthMonitor:
             "issues": len(issues),
             "checks": [c.to_dict() for c in checks],
             "repairs": repairs,
-            "overall": "healthy" if not issues else ("repaired" if repairs else "needs_attention")
+            "overall": (
+                "healthy"
+                if not issues
+                else ("repaired" if repairs else "needs_attention")
+            ),
         }
 
         self.last_report = report
         self._save_report(report)
 
-        log.info(f"Health check: {report['healthy']}/{report['total_checks']} healthy, "
-                 f"{len(issues)} issues, {len(repairs)} repairs")
+        log.info(
+            f"Health check: {report['healthy']}/{report['total_checks']} healthy, "
+            f"{len(issues)} issues, {len(repairs)} repairs"
+        )
 
         return report
 
@@ -131,16 +138,21 @@ class SystemHealthMonitor:
             percent = (stat.used / stat.total) * 100
             free_gb = stat.free / (1024**3)
             if percent > self.DISK_WARN_PERCENT:
-                return HealthStatus("disk", False,
-                    f"Disk {percent:.1f}% full ({free_gb:.1f}GB free)")
-            return HealthStatus("disk", True, f"{percent:.1f}% used, {free_gb:.1f}GB free")
+                return HealthStatus(
+                    "disk", False, f"Disk {percent:.1f}% full ({free_gb:.1f}GB free)"
+                )
+            return HealthStatus(
+                "disk", True, f"{percent:.1f}% used, {free_gb:.1f}GB free"
+            )
         except Exception as e:
             return HealthStatus("disk", False, f"Check failed: {e}")
 
     def _check_ram(self) -> HealthStatus:
         """RAM Usage prüfen."""
         try:
-            result = subprocess.run("free -m", shell=True, capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                "free -m", shell=True, capture_output=True, text=True, timeout=5
+            )
             if result.returncode == 0:
                 lines = result.stdout.strip().split("\n")
                 if len(lines) >= 2:
@@ -149,8 +161,14 @@ class SystemHealthMonitor:
                     used = int(parts[2])
                     percent = (used / total) * 100
                     if percent > self.RAM_WARN_PERCENT:
-                        return HealthStatus("ram", False, f"RAM {percent:.1f}% used ({used}MB/{total}MB)")
-                    return HealthStatus("ram", True, f"{percent:.1f}% used ({used}MB/{total}MB)")
+                        return HealthStatus(
+                            "ram",
+                            False,
+                            f"RAM {percent:.1f}% used ({used}MB/{total}MB)",
+                        )
+                    return HealthStatus(
+                        "ram", True, f"{percent:.1f}% used ({used}MB/{total}MB)"
+                    )
             return HealthStatus("ram", True, "Could not parse, assuming OK")
         except Exception as e:
             return HealthStatus("ram", True, f"Check skipped: {e}")
@@ -158,13 +176,23 @@ class SystemHealthMonitor:
     def _check_cpu(self) -> HealthStatus:
         """CPU Load prüfen."""
         try:
-            result = subprocess.run("cat /proc/loadavg", shell=True, capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                "cat /proc/loadavg",
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
             if result.returncode == 0:
                 load_1min = float(result.stdout.split()[0])
                 cores = os.cpu_count() or 1
                 if load_1min > cores * 2:
-                    return HealthStatus("cpu", False, f"High load: {load_1min:.1f} (cores: {cores})")
-                return HealthStatus("cpu", True, f"Load: {load_1min:.1f} (cores: {cores})")
+                    return HealthStatus(
+                        "cpu", False, f"High load: {load_1min:.1f} (cores: {cores})"
+                    )
+                return HealthStatus(
+                    "cpu", True, f"Load: {load_1min:.1f} (cores: {cores})"
+                )
             return HealthStatus("cpu", True, "Could not check")
         except Exception as e:
             return HealthStatus("cpu", True, f"Check skipped: {e}")
@@ -193,7 +221,11 @@ class SystemHealthMonitor:
 
         size_mb = db_path.stat().st_size / (1024 * 1024)
         if size_mb > self.DB_MAX_SIZE_MB:
-            return HealthStatus("db_size", False, f"DB too large: {size_mb:.1f}MB (max {self.DB_MAX_SIZE_MB}MB)")
+            return HealthStatus(
+                "db_size",
+                False,
+                f"DB too large: {size_mb:.1f}MB (max {self.DB_MAX_SIZE_MB}MB)",
+            )
         return HealthStatus("db_size", True, f"DB size: {size_mb:.1f}MB")
 
     def _check_logs(self) -> HealthStatus:
@@ -224,8 +256,14 @@ class SystemHealthMonitor:
                 pass  # Datei zwischen Scan und stat() gelöscht — ignorieren
 
         if old_baks:
-            return HealthStatus("bak_files", False, f"{len(old_baks)} old .bak files (>{self.BAK_MAX_AGE_HOURS}h)")
-        return HealthStatus("bak_files", True, f"{len(bak_files)} .bak files (all recent)")
+            return HealthStatus(
+                "bak_files",
+                False,
+                f"{len(old_baks)} old .bak files (>{self.BAK_MAX_AGE_HOURS}h)",
+            )
+        return HealthStatus(
+            "bak_files", True, f"{len(bak_files)} .bak files (all recent)"
+        )
 
     def _check_snapshots(self) -> HealthStatus:
         """Snapshot-Anzahl prüfen."""
@@ -235,7 +273,9 @@ class SystemHealthMonitor:
 
         snap_count = len([d for d in snap_dir.iterdir() if d.is_dir()])
         if snap_count > self.MAX_SNAPSHOTS + 5:
-            return HealthStatus("snapshots", False, f"{snap_count} snapshots (max {self.MAX_SNAPSHOTS})")
+            return HealthStatus(
+                "snapshots", False, f"{snap_count} snapshots (max {self.MAX_SNAPSHOTS})"
+            )
         return HealthStatus("snapshots", True, f"{snap_count} snapshots")
 
     def _check_config_integrity(self) -> HealthStatus:
@@ -264,18 +304,24 @@ class SystemHealthMonitor:
         """Python-Dateien Syntax prüfen."""
         broken = []
         for root, dirs, files in os.walk(str(PROJECT_ROOT)):
-            dirs[:] = [d for d in dirs if d not in ('__pycache__', '.git', 'data', 'venv', 'plugins')]
+            dirs[:] = [
+                d
+                for d in dirs
+                if d not in ("__pycache__", ".git", "data", "venv", "plugins")
+            ]
             for f in files:
-                if f.endswith('.py'):
+                if f.endswith(".py"):
                     path = os.path.join(root, f)
                     try:
-                        with open(path, 'r') as fh:
+                        with open(path, "r") as fh:
                             ast.parse(fh.read())
                     except SyntaxError:
                         broken.append(os.path.relpath(path, str(PROJECT_ROOT)))
 
         if broken:
-            return HealthStatus("python_syntax", False, f"Broken files: {', '.join(broken[:3])}")
+            return HealthStatus(
+                "python_syntax", False, f"Broken files: {', '.join(broken[:3])}"
+            )
         return HealthStatus("python_syntax", True, "All Python files OK")
 
     def _check_memory_count(self) -> HealthStatus:
@@ -289,8 +335,11 @@ class SystemHealthMonitor:
             count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
             conn.close()
             if count > self.MAX_MEMORY_ENTRIES:
-                return HealthStatus("memory_count", False,
-                    f"{count} memories (max {self.MAX_MEMORY_ENTRIES})")
+                return HealthStatus(
+                    "memory_count",
+                    False,
+                    f"{count} memories (max {self.MAX_MEMORY_ENTRIES})",
+                )
             return HealthStatus("memory_count", True, f"{count} memories")
         except Exception as e:
             return HealthStatus("memory_count", True, f"Check skipped: {e}")
@@ -305,8 +354,11 @@ class SystemHealthMonitor:
             with open(log_path, "r") as f:
                 entries = json.load(f)
             if len(entries) > self.MAX_REFLECTION_LOG:
-                return HealthStatus("reflection_log", False,
-                    f"{len(entries)} entries (max {self.MAX_REFLECTION_LOG})")
+                return HealthStatus(
+                    "reflection_log",
+                    False,
+                    f"{len(entries)} entries (max {self.MAX_REFLECTION_LOG})",
+                )
             return HealthStatus("reflection_log", True, f"{len(entries)} entries")
         except Exception:
             return HealthStatus("reflection_log", True, "Could not parse")
@@ -320,7 +372,9 @@ class SystemHealthMonitor:
         total_mb = total / (1024 * 1024)
 
         if total_mb > 200:
-            return HealthStatus("data_dir", False, f"Data dir: {total_mb:.1f}MB (>200MB)")
+            return HealthStatus(
+                "data_dir", False, f"Data dir: {total_mb:.1f}MB (>200MB)"
+            )
         return HealthStatus("data_dir", True, f"Data dir: {total_mb:.1f}MB")
 
     # ══════════════════════════════════════════════
@@ -336,12 +390,14 @@ class SystemHealthMonitor:
                 repair = self._repair(issue)
                 if repair:
                     repairs.append(repair)
-                    self.repair_log.append({
-                        "timestamp": datetime.now().isoformat(),
-                        "issue": issue.name,
-                        "detail": issue.detail,
-                        "repair": repair
-                    })
+                    self.repair_log.append(
+                        {
+                            "timestamp": datetime.now().isoformat(),
+                            "issue": issue.name,
+                            "detail": issue.detail,
+                            "repair": repair,
+                        }
+                    )
             except Exception as e:
                 log.error(f"Repair failed for {issue.name}: {e}")
 
@@ -489,7 +545,9 @@ class SystemHealthMonitor:
                     """DELETE FROM memories WHERE id IN (
                         SELECT id FROM memories
                         ORDER BY access_count ASC, updated_at ASC LIMIT ?
-                    )""", (to_delete,))
+                    )""",
+                    (to_delete,),
+                )
                 conn.commit()
             conn.close()
             return f"Cleaned {to_delete} old memories"
@@ -502,7 +560,7 @@ class SystemHealthMonitor:
         try:
             with open(log_path, "r") as f:
                 entries = json.load(f)
-            trimmed = entries[-self.MAX_REFLECTION_LOG:]
+            trimmed = entries[-self.MAX_REFLECTION_LOG :]
             tmp_path = log_path.with_suffix(".tmp")
             with open(tmp_path, "w") as f:
                 json.dump(trimmed, f, indent=2)
@@ -515,6 +573,7 @@ class SystemHealthMonitor:
         """Kaputte Python-Dateien aus Snapshot wiederherstellen."""
         try:
             from core.recovery import RecoveryManager
+
             rm = RecoveryManager()
             result = rm.restore_snapshot()
             if result["success"]:
@@ -622,5 +681,5 @@ class SystemHealthMonitor:
             "detail": f"{len(issues)} system issues detected",
             "data": {"issues": [i["name"] for i in issues]},
             "impact": min(0.9, 0.3 + len(issues) * 0.15),
-            "confidence": 0.95
+            "confidence": 0.95,
         }

@@ -5,11 +5,14 @@ Analysiert Python-Code auf Qualität, Complexity und potentielle Bugs.
 
 PLUGIN_CORE = True
 PLUGIN_NAME = "code_analyzer"
-PLUGIN_DESCRIPTION = "Analyze Python code for quality, complexity, and potential issues."
+PLUGIN_DESCRIPTION = (
+    "Analyze Python code for quality, complexity, and potential issues."
+)
 PLUGIN_PARAMS = {"code": "Python code to analyze", "file": "or path to Python file"}
 
 import ast
 import os
+
 
 def execute(params):
     code = params.get("code", "")
@@ -20,7 +23,7 @@ def execute(params):
         if not os.path.exists(file_path):
             return {"success": False, "result": f"File not found: {file_path}"}
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 code = f.read()
         except Exception as e:
             return {"success": False, "result": f"Cannot read file: {e}"}
@@ -43,8 +46,18 @@ def execute(params):
                 funcs.append(node.name)
                 # Cyclomatic complexity per function
                 for child in ast.walk(node):
-                    if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler,
-                                         ast.With, ast.Assert, ast.comprehension)):
+                    if isinstance(
+                        child,
+                        (
+                            ast.If,
+                            ast.While,
+                            ast.For,
+                            ast.ExceptHandler,
+                            ast.With,
+                            ast.Assert,
+                            ast.comprehension,
+                        ),
+                    ):
                         complexity += 1
 
             elif isinstance(node, ast.ClassDef):
@@ -64,22 +77,32 @@ def execute(params):
             elif isinstance(node, ast.Call):
                 if isinstance(node.func, ast.Name):
                     if node.func.id == "exec":
-                        issues.append(f"Line {node.lineno}: Avoid 'exec' (security risk)")
+                        issues.append(
+                            f"Line {node.lineno}: Avoid 'exec' (security risk)"
+                        )
                     elif node.func.id == "eval":
-                        issues.append(f"Line {node.lineno}: Avoid 'eval' (security risk)")
+                        issues.append(
+                            f"Line {node.lineno}: Avoid 'eval' (security risk)"
+                        )
                     elif node.func.id == "__import__":
                         issues.append(f"Line {node.lineno}: Dynamic import detected")
 
             # Bare except detection
             elif isinstance(node, ast.ExceptHandler):
                 if node.type is None:
-                    issues.append(f"Line {node.lineno}: Bare 'except:' catches everything - too broad")
+                    issues.append(
+                        f"Line {node.lineno}: Bare 'except:' catches everything - too broad"
+                    )
 
         # Suggestions based on metrics
         if complexity > 15:
-            suggestions.append(f"High complexity ({complexity}) - consider refactoring into smaller functions")
+            suggestions.append(
+                f"High complexity ({complexity}) - consider refactoring into smaller functions"
+            )
         elif complexity > 8:
-            suggestions.append(f"Moderate complexity ({complexity}) - review for simplification")
+            suggestions.append(
+                f"Moderate complexity ({complexity}) - review for simplification"
+            )
 
         if len(funcs) > 20:
             suggestions.append("Many functions - consider splitting into modules")
@@ -106,7 +129,7 @@ def execute(params):
             "complexity_score": complexity,
             "issues": issues if issues else ["No critical issues found"],
             "suggestions": suggestions if suggestions else ["Code looks good!"],
-            "lines": lines
+            "lines": lines,
         }
 
     except SyntaxError as e:

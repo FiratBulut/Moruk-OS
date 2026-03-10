@@ -1,6 +1,10 @@
 """
-Moruk AI OS - Memory System v3.1
+Moruk AI OS - Memory System v3.2
 Short-term: JSON (session). Long-term: VectorMemory (SQLite + TF-IDF).
+
+v3.2 Fix:
+- index_codebase() nutzt skip_dedup=True → kein TF-IDF Rebuild bei jedem Insert
+- TF-IDF wird nur einmal am Ende des Batch neu gebaut
 """
 import json
 import os
@@ -9,6 +13,7 @@ from pathlib import Path
 from core.vector_memory import VectorMemory
 
 DATA_DIR = Path(__file__).parent.parent / "data"
+
 
 class Memory:
     def __init__(self):
@@ -22,7 +27,8 @@ class Memory:
             try:
                 with open(self.short_path, "r") as f:
                     return json.load(f)
-            except: pass
+            except Exception:
+                pass
         return []
 
     def _save_short(self):
@@ -32,7 +38,11 @@ class Memory:
         os.replace(tmp_path, self.short_path)
 
     def remember_short(self, content: str, category: str = "general"):
-        self.short_term.append({"content": content, "category": category, "timestamp": datetime.now().isoformat()})
+        self.short_term.append({
+            "content": content,
+            "category": category,
+            "timestamp": datetime.now().isoformat(),
+        })
         self.short_term = self.short_term[-50:]
         self._save_short()
 
@@ -47,30 +57,6 @@ class Memory:
 
     def remember_long(self, content: str, category: str = "learned", tags: list = None):
         self.vector.store(content, category=category, tags=tags)
-        # Persönliche Infos auch ins User Profile speichern
-        if category in ("personal", "preference", "user_info"):
-            self._save_to_user_profile(content)
-
-    def _save_to_user_profile(self, content: str):
-        """Speichert persönliche Infos in data/user_profile.json unter preferences."""
-        profile_path = DATA_DIR / "user_profile.json"
-        try:
-            profile = {}
-            if profile_path.exists():
-                with open(profile_path, "r", encoding="utf-8") as f:
-                    profile = json.load(f)
-            if "preferences" not in profile:
-                profile["preferences"] = []
-            # Duplikate vermeiden
-            if content not in profile["preferences"]:
-                profile["preferences"].append(content)
-                profile["preferences"] = profile["preferences"][-50:]  # max 50
-            tmp = profile_path.with_suffix(".tmp")
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(profile, f, indent=2, ensure_ascii=False)
-            os.replace(tmp, profile_path)
-        except Exception as e:
-            pass  # Nie crashen wegen Profil-Speicherfehler
 
     def get_long_term(self, limit: int = 30) -> list:
         return self.vector.get_recent(limit=limit)
@@ -84,8 +70,69 @@ class Memory:
             "short_term_count": len(self.short_term),
             "long_term_count": v["total_memories"],
             "categories": v["categories"],
-            "all_tags": v.get("all_tags", [])
+            "all_tags": v.get("all_tags", []),
+            "db_size_kb": v.get("db_size_kb", 0),  # FIX: durchreichen an Sidebar
         }
 
     def get_memory_context(self, query: str = "", max_entries: int = 10) -> str:
-        return "Memory Context Active"
+        """Gibt relevante Erinnerungen als Kontext-String zurück."""
+        parts = []
+
+        if query:
+            results = self.vector.search(query, max_results=max_entries, min_score=0.1)
+            if results:
+                parts.append("Relevant Memory:")
+                for r in results[:5]:
+                    parts.append(f"  • [{r['category']}] {r['content'][:150]}")
+
+        if not parts:
+            recent = self.vector.get_recent(limit=5)
+            if recent:
+                parts.append("Recent Memory:")
+                for r in recent:
+                    parts.append(f"  • {r['content'][:150]}")
+
+        if self.short_term:
+            parts.append("Short-term:")
+            for m in self.short_term[-3:]:
+                parts.append(f"  • [{m['category']}] {m['content'][:100]}")
+
+        return "\n".join(parts) if parts else ""
+
+    def index_codebase(self, codebase_dir: str = None, extensions: list = None):
+        """Indexiert Python-Dateien. Löscht zuerst den alten Codebase-Index.
+        
+        v3.2: Nutzt skip_dedup=True für Performance — kein TF-IDF pro Insert.
+        """
+        from pathlib import Path as _Path
+        base = _Path(codebase_dir) if codebase_dir else _Path(__file__).parent.parent
+        exts = extensions or [".py"]
+        if hasattr(self.vector, "clear_category"):
+            self.vector.clear_category("codebase")
+        indexed = 0
+        for ext in exts:
+            for fpath in base.rglob(f"*{ext}"):
+                parts_set = set(fpath.parts)
+                if any(x in parts_set for x in ("venv", "__pycache__", ".git", "node_modules")):
+                    continue
+                try:
+                    code = fpath.read_text(encoding="utf-8", errors="replace")
+                    rel = str(fpath.relative_to(base))
+                    summary = f"FILE: {rel}\n{code[:2000]}"
+                    # v3.2: skip_dedup=True → kein TF-IDF Rebuild pro Insert!
+                    self.vector.store(
+                        summary, category="codebase",
+                        tags=["code", ext.lstrip(".")],
+                        skip_dedup=True,
+                    )
+                    indexed += 1
+                except Exception:
+                    continue
+
+        # TF-IDF wird beim nächsten search() automatisch rebuilt
+        # (weil _tfidf_dirty=True nach jedem store())
+        return indexed
+
+    def search_codebase(self, query: str, max_results: int = 5) -> list:
+        """Sucht nur im Codebase-Index."""
+        return self.vector.search(query, max_results=max_results, category="codebase")

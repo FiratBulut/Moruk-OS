@@ -47,19 +47,24 @@ class Reflector:
         return default
 
     def _load_stats(self) -> dict:
-        return self._load_json(self.stats_path, {
-            "total_actions": 0,
-            "successful_actions": 0,
-            "failed_actions": 0,
-            "tool_usage": {},
-            "error_patterns": [],
-            "lessons_learned": 0,
-            "streak": {"current": 0, "best": 0}
-        })
+        return self._load_json(
+            self.stats_path,
+            {
+                "total_actions": 0,
+                "successful_actions": 0,
+                "failed_actions": 0,
+                "tool_usage": {},
+                "error_patterns": [],
+                "lessons_learned": 0,
+                "streak": {"current": 0, "best": 0},
+            },
+        )
 
     def _atomic_write(self, path: Path, data, trim_fn=None):
         """Schreibt JSON atomar via Temp-Datei. Optional: trim_fn(data) vor dem Schreiben."""
-        path.parent.mkdir(parents=True, exist_ok=True)  # Sicherstellen dass data/ existiert
+        path.parent.mkdir(
+            parents=True, exist_ok=True
+        )  # Sicherstellen dass data/ existiert
         tmp_path = path.with_suffix(".tmp")
         try:
             payload = trim_fn(data) if trim_fn else data
@@ -82,7 +87,9 @@ class Reflector:
             self._stats_dirty_count = 0
 
     def _save_strategy(self):
-        self._atomic_write(self.strategy_path, self.strategy_rules, trim_fn=lambda d: d[-50:])
+        self._atomic_write(
+            self.strategy_path, self.strategy_rules, trim_fn=lambda d: d[-50:]
+        )
 
     def flush(self):
         """Erzwingt sofortiges Speichern aller dirty Stats (z.B. beim Shutdown)."""
@@ -102,9 +109,13 @@ class Reflector:
             "result": result[:500],
             "success": success,
             "lesson": lesson,
-            "tool": action.split(":")[0] if ":" in action else action.split()[0] if action else "unknown",
+            "tool": (
+                action.split(":")[0]
+                if ":" in action
+                else action.split()[0] if action else "unknown"
+            ),
             "error_type": self._classify_error(result) if not success else None,
-            "duration_context": "fast"  # Placeholder, kein Timing nötig
+            "duration_context": "fast",  # Placeholder, kein Timing nötig
         }
 
         self.log.append(entry)
@@ -120,7 +131,7 @@ class Reflector:
             self.memory.remember_long(
                 content=f"Lesson: {lesson} (from: {action[:80]})",
                 category="reflection",
-                tags=["lesson", "self-improvement"]
+                tags=["lesson", "self-improvement"],
             )
 
         # Strategy Rule generieren bei Fehler
@@ -188,9 +199,13 @@ class Reflector:
         error_type = entry.get("error_type", "unknown")
         tool = entry.get("tool", "unknown")
 
-        recent_errors = [e for e in self.log[-50:] if not e.get("success")
-                         and e.get("error_type") == error_type
-                         and e.get("tool") == tool]
+        recent_errors = [
+            e
+            for e in self.log[-50:]
+            if not e.get("success")
+            and e.get("error_type") == error_type
+            and e.get("tool") == tool
+        ]
 
         if len(recent_errors) < 2:
             return  # Erst ab 2x Pattern
@@ -206,7 +221,9 @@ class Reflector:
             existing["occurrences"] += 1
             existing["confidence"] = min(1.0, existing["confidence"] + 0.1)
             existing["updated"] = datetime.now().isoformat()
-            log.info(f"Strategy rule updated: {rule_key} → confidence={existing['confidence']:.2f}")
+            log.info(
+                f"Strategy rule updated: {rule_key} → confidence={existing['confidence']:.2f}"
+            )
         else:
             rule_text = self._generate_rule_text(tool, error_type)
             new_rule = {
@@ -215,7 +232,7 @@ class Reflector:
                 "confidence": 0.5,
                 "occurrences": len(recent_errors),
                 "created": datetime.now().isoformat(),
-                "updated": datetime.now().isoformat()
+                "updated": datetime.now().isoformat(),
             }
             self.strategy_rules.append(new_rule)
             log.info(f"New strategy rule: {rule_key} → '{rule_text}'")
@@ -225,20 +242,45 @@ class Reflector:
     def _generate_rule_text(self, tool: str, error_type: str) -> str:
         """Generiert Regeltext basierend auf Tool + Error-Type (ohne LLM)."""
         rules = {
-            ("terminal", "permission"): "Before running privileged commands, check if sudo is needed",
-            ("terminal", "timeout"): "For long-running commands, add timeout or run in background",
-            ("terminal", "file_not_found"): "Always verify file paths exist before using them",
-            ("write_file", "permission"): "Check write permissions before creating files",
-            ("read_file", "file_not_found"): "Use terminal 'ls' to verify path before reading",
-            ("terminal", "missing_module"): "Install required modules before importing them",
-            ("self_edit", "syntax_error"): "Review code carefully before self-editing, use smaller changes",
+            (
+                "terminal",
+                "permission",
+            ): "Before running privileged commands, check if sudo is needed",
+            (
+                "terminal",
+                "timeout",
+            ): "For long-running commands, add timeout or run in background",
+            (
+                "terminal",
+                "file_not_found",
+            ): "Always verify file paths exist before using them",
+            (
+                "write_file",
+                "permission",
+            ): "Check write permissions before creating files",
+            (
+                "read_file",
+                "file_not_found",
+            ): "Use terminal 'ls' to verify path before reading",
+            (
+                "terminal",
+                "missing_module",
+            ): "Install required modules before importing them",
+            (
+                "self_edit",
+                "syntax_error",
+            ): "Review code carefully before self-editing, use smaller changes",
         }
-        return rules.get((tool, error_type),
-                         f"When using {tool}: handle {error_type} errors. Check prerequisites first.")
+        return rules.get(
+            (tool, error_type),
+            f"When using {tool}: handle {error_type} errors. Check prerequisites first.",
+        )
 
     def get_strategy_rules(self, min_confidence: float = 0.3) -> list:
         """Gibt aktive Strategy-Rules über Confidence-Schwelle."""
-        return [r for r in self.strategy_rules if r.get("confidence", 0) >= min_confidence]
+        return [
+            r for r in self.strategy_rules if r.get("confidence", 0) >= min_confidence
+        ]
 
     def decay_confidence(self):
         """Reduziert Confidence von alten Regeln (Time-Decay)."""
@@ -266,7 +308,7 @@ class Reflector:
         analysis = {
             "timestamp": datetime.now().isoformat(),
             "insights": [],
-            "recommendations": []
+            "recommendations": [],
         }
 
         recent = self.log[-50:]
@@ -279,23 +321,31 @@ class Reflector:
         failure_rate = len(failures) / total
 
         if failure_rate > 0.4:
-            analysis["insights"].append({
-                "type": "high_failure_rate",
-                "value": f"{failure_rate:.0%}",
-                "detail": "Fehlerrate über 40% in den letzten Aktionen"
-            })
-            analysis["recommendations"].append("Komplexe Aufgaben in kleinere Schritte aufteilen")
+            analysis["insights"].append(
+                {
+                    "type": "high_failure_rate",
+                    "value": f"{failure_rate:.0%}",
+                    "detail": "Fehlerrate über 40% in den letzten Aktionen",
+                }
+            )
+            analysis["recommendations"].append(
+                "Komplexe Aufgaben in kleinere Schritte aufteilen"
+            )
 
         # ── Wiederholte Fehler ──
-        error_types = Counter(e.get("error_type") for e in failures if e.get("error_type"))
+        error_types = Counter(
+            e.get("error_type") for e in failures if e.get("error_type")
+        )
         for error_type, count in error_types.most_common(3):
             if count >= 3:
-                analysis["insights"].append({
-                    "type": "repeated_error",
-                    "value": error_type,
-                    "count": count,
-                    "detail": f"'{error_type}' tritt häufig auf ({count}x)"
-                })
+                analysis["insights"].append(
+                    {
+                        "type": "repeated_error",
+                        "value": error_type,
+                        "count": count,
+                        "detail": f"'{error_type}' tritt häufig auf ({count}x)",
+                    }
+                )
 
         # ── Tool-Effizienz ──
         tool_stats = {}
@@ -311,12 +361,14 @@ class Reflector:
             if stats["total"] >= 3:
                 rate = stats["success"] / stats["total"]
                 if rate < 0.5:
-                    analysis["insights"].append({
-                        "type": "low_tool_efficiency",
-                        "tool": tool,
-                        "success_rate": f"{rate:.0%}",
-                        "detail": f"Tool '{tool}' hat nur {rate:.0%} Erfolgsrate"
-                    })
+                    analysis["insights"].append(
+                        {
+                            "type": "low_tool_efficiency",
+                            "tool": tool,
+                            "success_rate": f"{rate:.0%}",
+                            "detail": f"Tool '{tool}' hat nur {rate:.0%} Erfolgsrate",
+                        }
+                    )
                     analysis["recommendations"].append(
                         f"Alternative Strategie für '{tool}' finden oder Vorbedingungen prüfen"
                     )
@@ -325,11 +377,13 @@ class Reflector:
         current_streak = self.stats.get("streak", {}).get("current", 0)
         best_streak = self.stats.get("streak", {}).get("best", 0)
         if current_streak >= 10:
-            analysis["insights"].append({
-                "type": "good_streak",
-                "value": current_streak,
-                "detail": f"Aktuelle Erfolgsserie: {current_streak} (Best: {best_streak})"
-            })
+            analysis["insights"].append(
+                {
+                    "type": "good_streak",
+                    "value": current_streak,
+                    "detail": f"Aktuelle Erfolgsserie: {current_streak} (Best: {best_streak})",
+                }
+            )
 
         # ── Confidence Decay ──
         self.decay_confidence()
@@ -338,15 +392,17 @@ class Reflector:
         self.flush()
 
         if analysis["insights"]:
-            log.info(f"Improvement analysis: {len(analysis['insights'])} insights, "
-                     f"{len(analysis['recommendations'])} recommendations")
+            log.info(
+                f"Improvement analysis: {len(analysis['insights'])} insights, "
+                f"{len(analysis['recommendations'])} recommendations"
+            )
 
             if self.memory and len(analysis["insights"]) >= 2:
                 summary = "; ".join([i["detail"] for i in analysis["insights"][:3]])
                 self.memory.remember_long(
                     content=f"Self-analysis: {summary}",
                     category="reflection",
-                    tags=["meta-cognition", "improvement"]
+                    tags=["meta-cognition", "improvement"],
                 )
 
         return analysis
@@ -370,12 +426,14 @@ class Reflector:
         self.stats["tool_usage"][tool] = self.stats["tool_usage"].get(tool, 0) + 1
 
         if not entry["success"] and entry.get("result"):
-            self.stats["error_patterns"].append({
-                "error": entry["result"][:200],
-                "error_type": entry.get("error_type", "unknown"),
-                "tool": tool,
-                "timestamp": entry["timestamp"]
-            })
+            self.stats["error_patterns"].append(
+                {
+                    "error": entry["result"][:200],
+                    "error_type": entry.get("error_type", "unknown"),
+                    "tool": tool,
+                    "timestamp": entry["timestamp"],
+                }
+            )
             self.stats["error_patterns"] = self.stats["error_patterns"][-50:]
 
         # Lazy save: nur alle STATS_SAVE_INTERVAL Aktionen schreiben
@@ -409,7 +467,9 @@ class Reflector:
         if total > 0:
             rate = self.get_success_rate()
             streak = self.stats.get("streak", {}).get("current", 0)
-            parts.append(f"Performance: {total} actions, {rate:.0f}% success, streak: {streak}")
+            parts.append(
+                f"Performance: {total} actions, {rate:.0f}% success, streak: {streak}"
+            )
 
         active_rules = self.get_strategy_rules(min_confidence=0.5)
         if active_rules:
@@ -432,8 +492,13 @@ class Reflector:
 
         return "\n".join(parts) if parts else ""
 
-    def reflect_on_project(self, project_title: str, subtask_results: list,
-                           final_approved: bool, final_verdict: str = ""):
+    def reflect_on_project(
+        self,
+        project_title: str,
+        subtask_results: list,
+        final_approved: bool,
+        final_verdict: str = "",
+    ):
         """Reflection nach einem abgeschlossenen Projekt — lernt aus Erfolgen und Fehlern."""
         total = len(subtask_results)
         approved = sum(1 for r in subtask_results if r.get("approved", False))
@@ -449,23 +514,29 @@ class Reflector:
                 action=f"project_subtask:{project_title}[{i+1}/{total}]",
                 result=f"approved={success}, issues={issues}",
                 success=success,
-                lesson=lesson
+                lesson=lesson,
             )
 
         # Gesamt-Projekt Reflection
-        summary = (f"Project '{project_title}': {approved}/{total} subtasks approved. "
-                   f"Final: {'✅' if final_approved else '❌'} {final_verdict[:100]}")
+        summary = (
+            f"Project '{project_title}': {approved}/{total} subtasks approved. "
+            f"Final: {'✅' if final_approved else '❌'} {final_verdict[:100]}"
+        )
         lesson = ""
         if not final_approved:
-            lesson = f"Project failed: {final_verdict[:150]}. Review subtask decomposition."
+            lesson = (
+                f"Project failed: {final_verdict[:150]}. Review subtask decomposition."
+            )
         elif failed > 0:
-            lesson = f"Project completed with {failed} failed subtasks. Check retry logic."
+            lesson = (
+                f"Project completed with {failed} failed subtasks. Check retry logic."
+            )
 
         self.reflect(
             action=f"project_complete:{project_title}",
             result=summary,
             success=final_approved,
-            lesson=lesson
+            lesson=lesson,
         )
 
         # Ins Langzeit-Gedächtnis
@@ -473,7 +544,7 @@ class Reflector:
             self.memory.remember_long(
                 content=summary,
                 category="project_reflection",
-                tags=["project", "completed" if final_approved else "failed"]
+                tags=["project", "completed" if final_approved else "failed"],
             )
 
         log.info(f"Project reflection saved: {summary}")

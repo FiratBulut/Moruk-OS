@@ -6,15 +6,19 @@ Extrahiert strukturierte Daten von Webseiten.
 PLUGIN_CORE = True
 PLUGIN_NAME = "web_scraper"
 PLUGIN_DESCRIPTION = "Extrahiert Titel, Links, Texte und Bilder von Webseiten."
-PLUGIN_PARAMS = {"url": "URL zum Scrapen", "extract": "what to extract: links|text|images|all"}
+PLUGIN_PARAMS = {
+    "url": "URL zum Scrapen",
+    "extract": "what to extract: links|text|images|all",
+}
 
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import re
 
+
 def execute(params):
-    url     = params.get("url", "").strip()
+    url = params.get("url", "").strip()
     extract = params.get("extract", "text")
 
     if not url:
@@ -31,7 +35,12 @@ def execute(params):
         title = soup.find("title")
         title_text = title.text.strip() if title else "(no title)"
 
-        lines = [f"URL:    {url}", f"Status: {resp.status_code}", f"Title:  {title_text}", ""]
+        lines = [
+            f"URL:    {url}",
+            f"Status: {resp.status_code}",
+            f"Title:  {title_text}",
+            "",
+        ]
 
         if extract in ("all", "text"):
             for tag in soup(["script", "style", "nav", "header", "footer"]):

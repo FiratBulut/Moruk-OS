@@ -4,7 +4,9 @@ PLUGIN_DESCRIPTION = "Selenium Browser: get(url) -> title + optional screenshot.
 PLUGIN_PARAMS = ["url", "screenshot", "headless"]
 
 import os
+
 os.environ["DISPLAY"] = ":0"
+
 
 def execute(params):
     driver = None
@@ -40,7 +42,8 @@ def execute(params):
         result_text = f"Title: {title}\nURL: {current_url}"
 
         if params.get("screenshot", False):
-            shot_path = os.path.expanduser("~/moruk-os/browser_shot.png")
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            shot_path = os.path.join(base_dir, "browser_shot.png")
             driver.save_screenshot(shot_path)
             size = os.path.getsize(shot_path) // 1024
             result_text += f"\nScreenshot: {shot_path} ({size}KB)"

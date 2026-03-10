@@ -6,10 +6,13 @@ Fallback auf einfache Extraktion wenn Brain nicht verfügbar.
 
 PLUGIN_NAME = "summarizer"
 PLUGIN_DESCRIPTION = "Summarize long text into concise summaries. Uses the LLM directly — no ML model download needed."
-PLUGIN_PARAMS = '{"text": "text to summarize", "max_length": 150, "style": "bullet|paragraph|tldr"}'
+PLUGIN_PARAMS = (
+    '{"text": "text to summarize", "max_length": 150, "style": "bullet|paragraph|tldr"}'
+)
 PLUGIN_CORE = True
 
 from core.logger import get_logger
+
 log = get_logger("summarizer")
 
 # Von ToolRouter gesetzt
@@ -17,9 +20,9 @@ _brain = None
 
 
 def execute(params: dict) -> dict:
-    text       = params.get("text", "").strip()
+    text = params.get("text", "").strip()
     max_length = int(params.get("max_length", 150))
-    style      = params.get("style", "paragraph")  # bullet | paragraph | tldr
+    style = params.get("style", "paragraph")  # bullet | paragraph | tldr
 
     if not text:
         return {"success": False, "result": "No text provided"}
@@ -31,9 +34,9 @@ def execute(params: dict) -> dict:
     if _brain is not None:
         try:
             style_instruction = {
-                "bullet":    "as 3-5 concise bullet points",
+                "bullet": "as 3-5 concise bullet points",
                 "paragraph": "as 2-3 concise paragraphs",
-                "tldr":      "as a single TL;DR sentence (max 2 sentences)",
+                "tldr": "as a single TL;DR sentence (max 2 sentences)",
             }.get(style, "as 2-3 concise paragraphs")
 
             prompt = (
@@ -43,12 +46,7 @@ def execute(params: dict) -> dict:
                 f"TEXT:\n{text[:6000]}"
             )
 
-            result = _brain.think(
-                prompt,
-                max_iterations=1,
-                depth=2,
-                isolated=True
-            )
+            result = _brain.think(prompt, max_iterations=1, depth=2, isolated=True)
 
             if result:
                 return {
@@ -56,7 +54,7 @@ def execute(params: dict) -> dict:
                     "result": f"Summary ({style}):\n\n{result.strip()}",
                     "summary": result.strip(),
                     "original_length": len(text),
-                    "method": "llm"
+                    "method": "llm",
                 }
         except Exception as e:
             log.warning(f"LLM summarization failed: {e} — falling back to extraction")
@@ -64,7 +62,8 @@ def execute(params: dict) -> dict:
     # ── Fallback: Extraktion (erste + letzte Sätze) ───────────
     try:
         import re
-        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+
+        sentences = re.split(r"(?<=[.!?])\s+", text.strip())
         sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
 
         if len(sentences) <= 3:
@@ -83,7 +82,7 @@ def execute(params: dict) -> dict:
             "result": f"Summary (extraction):\n\n{summary}",
             "summary": summary,
             "original_length": len(text),
-            "method": "extraction"
+            "method": "extraction",
         }
     except Exception as e:
         return {"success": False, "result": f"Summarizer error: {e}"}

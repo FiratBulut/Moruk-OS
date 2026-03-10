@@ -20,11 +20,11 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 class SelfModel:
     """Moruk's Selbstbild: Capabilities, Stärken, Schwächen, Confidence."""
 
-    STRENGTH_THRESHOLD = 0.85   # success_rate > 85% = Stärke
-    WEAKNESS_THRESHOLD = 0.50   # success_rate < 50% = Schwäche
-    MIN_RUNS_FOR_EVAL = 5       # Mindestens 5 Runs für Bewertung
-    CONFIDENCE_DECAY = 0.98     # Pro Stunde
-    UPDATE_INTERVAL = 15        # Alle 15 Aktionen Update
+    STRENGTH_THRESHOLD = 0.85  # success_rate > 85% = Stärke
+    WEAKNESS_THRESHOLD = 0.50  # success_rate < 50% = Schwäche
+    MIN_RUNS_FOR_EVAL = 5  # Mindestens 5 Runs für Bewertung
+    CONFIDENCE_DECAY = 0.98  # Pro Stunde
+    UPDATE_INTERVAL = 15  # Alle 15 Aktionen Update
 
     def __init__(self):
         self.profile_path = DATA_DIR / "self_profile.json"
@@ -51,10 +51,10 @@ class SelfModel:
             "decision_profile": {
                 "risk_tolerance": 0.5,
                 "planning_depth": 0.5,
-                "exploration_bias": 0.3
+                "exploration_bias": 0.3,
             },
             "last_updated": datetime.now().isoformat(),
-            "total_actions": 0
+            "total_actions": 0,
         }
 
     def _save_profile(self):
@@ -76,7 +76,11 @@ class SelfModel:
         """Zeichnet eine Tool-Ausführung auf und aktualisiert das Profil."""
         # Tool Stats updaten
         if tool not in self.profile["tool_stats"]:
-            self.profile["tool_stats"][tool] = {"runs": 0, "successes": 0, "failures": 0}
+            self.profile["tool_stats"][tool] = {
+                "runs": 0,
+                "successes": 0,
+                "failures": 0,
+            }
 
         stats = self.profile["tool_stats"][tool]
         stats["runs"] += 1
@@ -123,7 +127,7 @@ class SelfModel:
         self.profile["capabilities"][tool] = {
             "success_rate": round(success_rate, 3),
             "confidence": round(confidence, 3),
-            "runs": runs
+            "runs": runs,
         }
 
     # ══════════════════════════════════════════════
@@ -164,7 +168,9 @@ class SelfModel:
         self._apply_decay()
 
         self.profile["last_updated"] = datetime.now().isoformat()
-        log.info(f"Self-model updated: {len(strengths)} strengths, {len(weaknesses)} weaknesses")
+        log.info(
+            f"Self-model updated: {len(strengths)} strengths, {len(weaknesses)} weaknesses"
+        )
 
     def _update_decision_profile(self):
         """Passt risk_tolerance und planning_depth basierend auf Performance an."""
@@ -194,7 +200,9 @@ class SelfModel:
     def _apply_decay(self):
         """Confidence Decay: Alte Bewertungen verlieren an Gewicht."""
         for tool, cap in self.profile["capabilities"].items():
-            cap["confidence"] = round(max(0.1, cap["confidence"] * self.CONFIDENCE_DECAY), 3)
+            cap["confidence"] = round(
+                max(0.1, cap["confidence"] * self.CONFIDENCE_DECAY), 3
+            )
 
     # ══════════════════════════════════════════════
     # 3. DECISION MODIFIER
@@ -213,7 +221,7 @@ class SelfModel:
                 "safe": True,
                 "advice": f"No data for '{tool}' yet. Proceed carefully.",
                 "confidence": 0.5,
-                "alternatives": []
+                "alternatives": [],
             }
 
         confidence = cap["confidence"]
@@ -223,7 +231,7 @@ class SelfModel:
             "safe": True,
             "advice": "",
             "confidence": confidence,
-            "alternatives": []
+            "alternatives": [],
         }
 
         if is_weakness:
@@ -237,9 +245,13 @@ class SelfModel:
             if alternatives:
                 advice["alternatives"] = alternatives
         elif rate < 0.7:
-            advice["advice"] = f"'{tool}' has moderate reliability ({rate:.0%}). Extra caution recommended."
+            advice["advice"] = (
+                f"'{tool}' has moderate reliability ({rate:.0%}). Extra caution recommended."
+            )
         else:
-            advice["advice"] = f"'{tool}' is reliable ({rate:.0%}, confidence: {confidence:.0%})."
+            advice["advice"] = (
+                f"'{tool}' is reliable ({rate:.0%}, confidence: {confidence:.0%})."
+            )
 
         return advice
 
@@ -267,15 +279,20 @@ class SelfModel:
         if strengths:
             parts.append(f"Your strengths: {', '.join(strengths)}")
         if weaknesses:
-            parts.append(f"Your weaknesses: {', '.join(weaknesses)} — be extra careful here")
+            parts.append(
+                f"Your weaknesses: {', '.join(weaknesses)} — be extra careful here"
+            )
 
         # Top capabilities
         caps = self.profile.get("capabilities", {})
-        top = sorted(caps.items(), key=lambda x: x[1].get("confidence", 0), reverse=True)[:3]
+        top = sorted(
+            caps.items(), key=lambda x: x[1].get("confidence", 0), reverse=True
+        )[:3]
         if top:
-            parts.append("Top skills: " + ", ".join(
-                f"{t}({c['success_rate']:.0%})" for t, c in top
-            ))
+            parts.append(
+                "Top skills: "
+                + ", ".join(f"{t}({c['success_rate']:.0%})" for t, c in top)
+            )
 
         dp = self.profile.get("decision_profile", {})
         if dp.get("risk_tolerance", 0.5) < 0.35:
@@ -304,7 +321,9 @@ class SelfModel:
 
         # Top/Bottom skills
         if caps:
-            sorted_caps = sorted(caps.items(), key=lambda x: x[1].get("success_rate", 0))
+            sorted_caps = sorted(
+                caps.items(), key=lambda x: x[1].get("success_rate", 0)
+            )
             if sorted_caps:
                 worst = sorted_caps[0]
                 best = sorted_caps[-1]

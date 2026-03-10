@@ -12,20 +12,59 @@ import os
 import re
 from datetime import datetime
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTextEdit, QSplitter, QFrame, QScrollArea, QSizePolicy,
-    QApplication
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTextEdit,
+    QSplitter,
+    QFrame,
+    QScrollArea,
+    QSizePolicy,
+    QApplication,
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QThread
 from PyQt6.QtGui import QFont, QColor, QTextCharFormat, QSyntaxHighlighter
 
 # ── Syntax Highlighter ────────────────────────────────────────────────────────
 
+
 class PythonHighlighter(QSyntaxHighlighter):
-    KEYWORDS = ['def', 'class', 'import', 'from', 'return', 'if', 'else', 'elif',
-                 'for', 'while', 'try', 'except', 'with', 'as', 'in', 'not', 'and',
-                 'or', 'True', 'False', 'None', 'lambda', 'pass', 'break', 'continue',
-                 'global', 'yield', 'async', 'await', 'raise', 'del', 'assert']
+    KEYWORDS = [
+        "def",
+        "class",
+        "import",
+        "from",
+        "return",
+        "if",
+        "else",
+        "elif",
+        "for",
+        "while",
+        "try",
+        "except",
+        "with",
+        "as",
+        "in",
+        "not",
+        "and",
+        "or",
+        "True",
+        "False",
+        "None",
+        "lambda",
+        "pass",
+        "break",
+        "continue",
+        "global",
+        "yield",
+        "async",
+        "await",
+        "raise",
+        "del",
+        "assert",
+    ]
 
     def __init__(self, document):
         super().__init__(document)
@@ -35,29 +74,29 @@ class PythonHighlighter(QSyntaxHighlighter):
         kw_fmt.setForeground(QColor("#c792ea"))
         kw_fmt.setFontWeight(700)
         for kw in self.KEYWORDS:
-            self._rules.append((re.compile(rf'\b{kw}\b'), kw_fmt))
+            self._rules.append((re.compile(rf"\b{kw}\b"), kw_fmt))
 
         str_fmt = QTextCharFormat()
         str_fmt.setForeground(QColor("#c3e88d"))
-        self._rules.append((re.compile(r'(\".*?\"|\'.*?\')'), str_fmt))
+        self._rules.append((re.compile(r"(\".*?\"|\'.*?\')"), str_fmt))
 
         comment_fmt = QTextCharFormat()
         comment_fmt.setForeground(QColor("#546e7a"))
         comment_fmt.setFontItalic(True)
-        self._rules.append((re.compile(r'#[^\n]*'), comment_fmt))
+        self._rules.append((re.compile(r"#[^\n]*"), comment_fmt))
 
         func_fmt = QTextCharFormat()
         func_fmt.setForeground(QColor("#82aaff"))
-        self._rules.append((re.compile(r'\b([a-zA-Z_]\w*)\s*(?=\()'), func_fmt))
+        self._rules.append((re.compile(r"\b([a-zA-Z_]\w*)\s*(?=\()"), func_fmt))
 
         num_fmt = QTextCharFormat()
         num_fmt.setForeground(QColor("#f78c6c"))
-        self._rules.append((re.compile(r'\b\d+\.?\d*\b'), num_fmt))
+        self._rules.append((re.compile(r"\b\d+\.?\d*\b"), num_fmt))
 
         plugin_fmt = QTextCharFormat()
         plugin_fmt.setForeground(QColor("#ffcb6b"))
         plugin_fmt.setFontWeight(700)
-        self._rules.append((re.compile(r'PLUGIN_\w+'), plugin_fmt))
+        self._rules.append((re.compile(r"PLUGIN_\w+"), plugin_fmt))
 
     def highlightBlock(self, text):
         for pattern, fmt in self._rules:
@@ -67,14 +106,15 @@ class PythonHighlighter(QSyntaxHighlighter):
 
 # ── DeepThink Review Worker ───────────────────────────────────────────────────
 
+
 class DeepThinkWorker(QObject):
     finished = pyqtSignal(str)
-    error    = pyqtSignal(str)
+    error = pyqtSignal(str)
 
     def __init__(self, brain, code: str, filename: str):
         super().__init__()
-        self.brain    = brain
-        self.code     = code
+        self.brain = brain
+        self.code = code
         self.filename = filename
 
     def run(self):
@@ -84,7 +124,7 @@ class DeepThinkWorker(QObject):
                 f"und gib:\n1. Kritische Bugs (falls vorhanden)\n2. Verbesserungsvorschläge\n"
                 f"3. Security-Issues\nSei präzise, max 300 Wörter.\n\n```python\n{self.code}\n```"
             )
-            if hasattr(self.brain, 'deepthink') and self.brain.deepthink:
+            if hasattr(self.brain, "deepthink") and self.brain.deepthink:
                 result = self.brain.deepthink.think(prompt)
             else:
                 result = self.brain.think(prompt, max_iterations=1)
@@ -96,22 +136,22 @@ class DeepThinkWorker(QObject):
 # ── Tool Event Item ───────────────────────────────────────────────────────────
 
 TOOL_ICONS = {
-    "write_file":     ("📝", "#c3e88d"),
-    "read_file":      ("📖", "#82aaff"),
-    "terminal":       ("⚡", "#ffcb6b"),
-    "web_search":     ("🌐", "#89ddff"),
-    "web_scraper":    ("🌐", "#89ddff"),
-    "memory_store":   ("🧠", "#c792ea"),
-    "memory_search":  ("🧠", "#c792ea"),
-    "image_generator":("🎨", "#f78c6c"),
-    "task_create":    ("✅", "#c3e88d"),
-    "task_complete":  ("✅", "#c3e88d"),
-    "list_tools":     ("🔍", "#546e7a"),
-    "vision":         ("👁", "#89ddff"),
-    "voice":          ("🔊", "#c792ea"),
-    "browser":        ("🌍", "#89ddff"),
-    "file_manager":   ("📁", "#ffcb6b"),
-    "self_edit":      ("✏️", "#f78c6c"),
+    "write_file": ("📝", "#c3e88d"),
+    "read_file": ("📖", "#82aaff"),
+    "terminal": ("⚡", "#ffcb6b"),
+    "web_search": ("🌐", "#89ddff"),
+    "web_scraper": ("🌐", "#89ddff"),
+    "memory_store": ("🧠", "#c792ea"),
+    "memory_search": ("🧠", "#c792ea"),
+    "image_generator": ("🎨", "#f78c6c"),
+    "task_create": ("✅", "#c3e88d"),
+    "task_complete": ("✅", "#c3e88d"),
+    "list_tools": ("🔍", "#546e7a"),
+    "vision": ("👁", "#89ddff"),
+    "voice": ("🔊", "#c792ea"),
+    "browser": ("🌍", "#89ddff"),
+    "file_manager": ("📁", "#ffcb6b"),
+    "self_edit": ("✏️", "#f78c6c"),
 }
 DEFAULT_ICON = ("🔧", "#89ddff")
 
@@ -141,7 +181,9 @@ class ToolEventWidget(QFrame):
         layout.addWidget(icon_lbl)
 
         name_lbl = QLabel(tool_name)
-        name_lbl.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 11px; border: none; background: transparent;")
+        name_lbl.setStyleSheet(
+            f"color: {color}; font-weight: bold; font-size: 11px; border: none; background: transparent;"
+        )
         name_lbl.setFixedWidth(110)
         layout.addWidget(name_lbl)
 
@@ -152,21 +194,32 @@ class ToolEventWidget(QFrame):
             short = params_str[:60]
 
         param_lbl = QLabel(short)
-        param_lbl.setStyleSheet("color: #546e7a; font-size: 10px; border: none; background: transparent;")
-        param_lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        param_lbl.setStyleSheet(
+            "color: #546e7a; font-size: 10px; border: none; background: transparent;"
+        )
+        param_lbl.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         param_lbl.setWordWrap(False)
         layout.addWidget(param_lbl, 1)
 
         time_lbl = QLabel(timestamp)
-        time_lbl.setStyleSheet("color: #3a3a5c; font-size: 9px; border: none; background: transparent;")
+        time_lbl.setStyleSheet(
+            "color: #3a3a5c; font-size: 9px; border: none; background: transparent;"
+        )
         layout.addWidget(time_lbl)
 
     def mark_done(self, success: bool):
         border = "#c3e88d" if success else "#f07178"
-        self.setStyleSheet(self.styleSheet().replace("border-left:", f"border-right: 2px solid {border}; border-left:"))
+        self.setStyleSheet(
+            self.styleSheet().replace(
+                "border-left:", f"border-right: 2px solid {border}; border-left:"
+            )
+        )
 
 
 # ── LiveActivityWindow ────────────────────────────────────────────────────────
+
 
 class LiveActivityWindow(QWidget):
     """
@@ -175,19 +228,19 @@ class LiveActivityWindow(QWidget):
         window.connect_worker(worker)  → auf jeden neuen Worker aufrufen
     """
 
-    sig_tool_start  = pyqtSignal(str, str)
+    sig_tool_start = pyqtSignal(str, str)
     sig_tool_result = pyqtSignal(str, str, bool)
-    sig_token       = pyqtSignal(str)
-    sig_clear       = pyqtSignal()
+    sig_token = pyqtSignal(str)
+    sig_clear = pyqtSignal()
 
     def __init__(self, brain=None, parent=None):
         super().__init__(parent)
-        self.brain          = brain
-        self._current_file  = None
-        self._current_code  = ""
-        self._tool_widgets  = {}
-        self._dt_thread     = None
-        self._patch_code    = ""
+        self.brain = brain
+        self._current_file = None
+        self._current_code = ""
+        self._tool_widgets = {}
+        self._dt_thread = None
+        self._patch_code = ""
 
         self._build_ui()
         self._connect_internal()
@@ -224,7 +277,9 @@ class LiveActivityWindow(QWidget):
         h_layout.addWidget(pulse)
 
         title = QLabel("Live Activity")
-        title.setStyleSheet("font-size: 13px; font-weight: bold; color: #e0e0ff; letter-spacing: 1px;")
+        title.setStyleSheet(
+            "font-size: 13px; font-weight: bold; color: #e0e0ff; letter-spacing: 1px;"
+        )
         h_layout.addWidget(title)
         h_layout.addStretch()
 
@@ -249,7 +304,9 @@ class LiveActivityWindow(QWidget):
 
         # Splitter: Code oben / Tool-Log unten
         splitter = QSplitter(Qt.Orientation.Vertical)
-        splitter.setStyleSheet("QSplitter::handle { background: #1e1e3a; height: 3px; }")
+        splitter.setStyleSheet(
+            "QSplitter::handle { background: #1e1e3a; height: 3px; }"
+        )
 
         # Code Panel
         code_panel = QWidget()
@@ -260,7 +317,9 @@ class LiveActivityWindow(QWidget):
 
         self._file_bar = QFrame()
         self._file_bar.setFixedHeight(30)
-        self._file_bar.setStyleSheet("background: #0a0a18; border-bottom: 1px solid #1e1e3a;")
+        self._file_bar.setStyleSheet(
+            "background: #0a0a18; border-bottom: 1px solid #1e1e3a;"
+        )
         fb_layout = QHBoxLayout(self._file_bar)
         fb_layout.setContentsMargins(12, 0, 12, 0)
         self._file_lbl = QLabel("— keine Datei —")
@@ -293,7 +352,9 @@ class LiveActivityWindow(QWidget):
 
         log_header = QFrame()
         log_header.setFixedHeight(28)
-        log_header.setStyleSheet("background: #080810; border-bottom: 1px solid #1e1e3a;")
+        log_header.setStyleSheet(
+            "background: #080810; border-bottom: 1px solid #1e1e3a;"
+        )
         lh_layout = QHBoxLayout(log_header)
         lh_layout.setContentsMargins(12, 0, 12, 0)
         lh_label = QLabel("🔧 Tool Calls")
@@ -376,7 +437,9 @@ class LiveActivityWindow(QWidget):
         """Verbindet ChatWorker Signals mit dem Live-Fenster."""
         try:
             worker.tool_start.connect(lambda n, p: self.sig_tool_start.emit(n, p))
-            worker.tool_result.connect(lambda n, r, s: self.sig_tool_result.emit(n, r, s))
+            worker.tool_result.connect(
+                lambda n, r, s: self.sig_tool_result.emit(n, r, s)
+            )
             worker.token_received.connect(lambda t: self.sig_token.emit(t))
         except Exception:
             pass
@@ -388,7 +451,7 @@ class LiveActivityWindow(QWidget):
             try:
                 p = json.loads(params_str)
                 filepath = p.get("path", p.get("filename", "unknown"))
-                content  = p.get("content", "")
+                content = p.get("content", "")
                 self._show_file(filepath, content)
             except Exception:
                 pass
@@ -407,9 +470,12 @@ class LiveActivityWindow(QWidget):
         self._tool_layout.insertWidget(count - 1, w)
         self._tool_widgets[tool_name] = w
 
-        QTimer.singleShot(50, lambda: self._tool_scroll.verticalScrollBar().setValue(
-            self._tool_scroll.verticalScrollBar().maximum()
-        ))
+        QTimer.singleShot(
+            50,
+            lambda: self._tool_scroll.verticalScrollBar().setValue(
+                self._tool_scroll.verticalScrollBar().maximum()
+            ),
+        )
 
     def _on_tool_result(self, tool_name: str, result: str, success: bool):
         w = self._tool_widgets.get(tool_name)
@@ -424,18 +490,27 @@ class LiveActivityWindow(QWidget):
         self._current_file = filepath
         self._current_code = content
         name = os.path.basename(filepath)
-        ext  = os.path.splitext(filepath)[1].lower()
-        lang = {".py": "Python", ".json": "JSON", ".md": "Markdown",
-                ".js": "JavaScript", ".html": "HTML", ".sh": "Shell"}.get(ext, "Text")
+        ext = os.path.splitext(filepath)[1].lower()
+        lang = {
+            ".py": "Python",
+            ".json": "JSON",
+            ".md": "Markdown",
+            ".js": "JavaScript",
+            ".html": "HTML",
+            ".sh": "Shell",
+        }.get(ext, "Text")
 
         self._file_lbl.setText(f"📝 {name}")
         self._file_lbl.setStyleSheet("color: #c3e88d; font-size: 11px;")
         self._lang_lbl.setText(lang)
         self._code_edit.setPlainText(content)
 
-        QTimer.singleShot(30, lambda: self._code_edit.verticalScrollBar().setValue(
-            self._code_edit.verticalScrollBar().maximum()
-        ))
+        QTimer.singleShot(
+            30,
+            lambda: self._code_edit.verticalScrollBar().setValue(
+                self._code_edit.verticalScrollBar().maximum()
+            ),
+        )
 
         self._dt_btn.setEnabled(True)
         self._patch_btn.setEnabled(True)
@@ -453,7 +528,9 @@ class LiveActivityWindow(QWidget):
         self._dt_btn.setText("🧠  Analysiere…")
         self._set_status("DeepThink läuft…", active=True)
 
-        worker = DeepThinkWorker(self.brain, self._current_code, self._current_file or "code.py")
+        worker = DeepThinkWorker(
+            self.brain, self._current_code, self._current_file or "code.py"
+        )
         self._dt_thread = QThread()
         worker.moveToThread(self._dt_thread)
         self._dt_thread.started.connect(worker.run)
@@ -490,22 +567,31 @@ class LiveActivityWindow(QWidget):
         self._set_status("Patching…", active=True)
 
         import threading
-        threading.Thread(target=self._do_patch, args=(patch_prompt,), daemon=True).start()
+
+        threading.Thread(
+            target=self._do_patch, args=(patch_prompt,), daemon=True
+        ).start()
 
     def _do_patch(self, prompt: str):
         try:
             self.brain.think(prompt, max_iterations=5)
             QTimer.singleShot(0, lambda: self._patch_btn.setText("✅  Gepatcht!"))
-            QTimer.singleShot(2000, lambda: (
-                self._patch_btn.setEnabled(True),
-                self._patch_btn.setText("🔧  Patchen")
-            ))
+            QTimer.singleShot(
+                2000,
+                lambda: (
+                    self._patch_btn.setEnabled(True),
+                    self._patch_btn.setText("🔧  Patchen"),
+                ),
+            )
         except Exception as e:
             QTimer.singleShot(0, lambda: self._patch_btn.setText(f"❌ {str(e)[:30]}"))
-            QTimer.singleShot(2000, lambda: (
-                self._patch_btn.setEnabled(True),
-                self._patch_btn.setText("🔧  Patchen")
-            ))
+            QTimer.singleShot(
+                2000,
+                lambda: (
+                    self._patch_btn.setEnabled(True),
+                    self._patch_btn.setText("🔧  Patchen"),
+                ),
+            )
 
     def _copy_code(self):
         QApplication.clipboard().setText(self._current_code)

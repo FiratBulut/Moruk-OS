@@ -21,6 +21,7 @@ PLUGIN_PARAMS = (
 PLUGIN_CORE = False
 
 from core.logger import get_logger
+
 log = get_logger("web_monitor")
 
 # Von autonomy_loop / main_window gesetzt
@@ -33,6 +34,7 @@ def execute(params: dict) -> dict:
     if _engine is None:
         try:
             from core.monitor_engine import MonitorEngine
+
             _engine = MonitorEngine()
         except Exception as e:
             return {"success": False, "result": f"MonitorEngine not available: {e}"}
@@ -43,19 +45,24 @@ def execute(params: dict) -> dict:
     if action == "list":
         monitors = _engine.list_monitors()
         if not monitors:
-            return {"success": True, "result": "No monitors configured yet.\n\nExamples:\n"
-                    "• web_monitor add name='Grok Changelog' type=search query='xAI grok API changelog' interval=120\n"
-                    "• web_monitor add name='EUR/USD' type=price query='EUR USD exchange rate' interval=60\n"
-                    "• web_monitor add name='moruk-os' type=github query='owner/moruk-os' interval=1440"}
+            return {
+                "success": True,
+                "result": "No monitors configured yet.\n\nExamples:\n"
+                "• web_monitor add name='Grok Changelog' type=search query='xAI grok API changelog' interval=120\n"
+                "• web_monitor add name='EUR/USD' type=price query='EUR USD exchange rate' interval=60\n"
+                "• web_monitor add name='moruk-os' type=github query='owner/moruk-os' interval=1440",
+            }
 
         lines = [f"📡 Active Monitors ({len(monitors)}):"]
         for m in monitors:
             from core.monitor_engine import MonitorEngine
+
             icon = MonitorEngine.TYPE_ICONS.get(m.get("type", "custom"), "📡")
             status_icon = "⏸" if m["status"] == "paused" else "🟢"
             last = m.get("last_checked", "never")
             if last and last != "never":
                 from datetime import datetime
+
                 last = datetime.fromisoformat(last).strftime("%d.%m %H:%M")
             lines.append(
                 f"\n{status_icon} {icon} [{m['id']}] {m['name']}\n"
@@ -68,9 +75,9 @@ def execute(params: dict) -> dict:
 
     # ── ADD ───────────────────────────────────────────────────
     elif action == "add":
-        name     = params.get("name", "")
-        mtype    = params.get("type", "search")
-        query    = params.get("query", "")
+        name = params.get("name", "")
+        mtype = params.get("type", "search")
+        query = params.get("query", "")
         interval = int(params.get("interval_minutes", 60))
         on_change = params.get("on_change", "notify")
 
@@ -85,7 +92,7 @@ def execute(params: dict) -> dict:
                     f"✅ Monitor added: '{name}'\n"
                     f"   Type: {mtype} | Interval: {interval}min | On change: {on_change}\n"
                     f"   First check will run within {min(interval, 60)} minutes."
-                )
+                ),
             }
         return {"success": False, "result": result.get("error", "Failed")}
 
@@ -101,12 +108,18 @@ def execute(params: dict) -> dict:
     elif action == "pause":
         mid = params.get("id") or params.get("name", "")
         r = _engine.pause_monitor(mid)
-        return {"success": r["success"], "result": f"⏸ Paused: {mid}" if r["success"] else r.get("error")}
+        return {
+            "success": r["success"],
+            "result": f"⏸ Paused: {mid}" if r["success"] else r.get("error"),
+        }
 
     elif action == "resume":
         mid = params.get("id") or params.get("name", "")
         r = _engine.resume_monitor(mid)
-        return {"success": r["success"], "result": f"▶ Resumed: {mid}" if r["success"] else r.get("error")}
+        return {
+            "success": r["success"],
+            "result": f"▶ Resumed: {mid}" if r["success"] else r.get("error"),
+        }
 
     # ── CHECK NOW ─────────────────────────────────────────────
     elif action == "check_now":
@@ -115,6 +128,7 @@ def execute(params: dict) -> dict:
             with _engine._lock:
                 if mid in _engine.monitors:
                     from datetime import datetime
+
                     _engine.monitors[mid]["next_check"] = datetime.now().isoformat()
                     _engine._save()
             return {"success": True, "result": f"⚡ Check triggered for: {mid}"}
@@ -122,4 +136,7 @@ def execute(params: dict) -> dict:
             _engine.force_check_all()
             return {"success": True, "result": "⚡ Check triggered for all monitors"}
 
-    return {"success": False, "result": f"Unknown action: {action}. Use: add|remove|list|pause|resume|check_now"}
+    return {
+        "success": False,
+        "result": f"Unknown action: {action}. Use: add|remove|list|pause|resume|check_now",
+    }

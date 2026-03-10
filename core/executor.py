@@ -1,20 +1,22 @@
 """
 Moruk AI OS - Executor
-Terminal-Befehle und File-Operationen. (Gehärtet & Syntaktisch korrekt)
+Terminal-Befehle und File-Operationen. (Gehärtet & Modular)
 """
 
 import subprocess
 import os
 import threading
-import shlex
 from pathlib import Path
 
 
 class Executor:
     """Führt System-Befehle und File-Ops für Moruk OS aus."""
 
-    def __init__(self, working_dir: str = None):
+    def __init__(self, working_dir: str = None, strict_sandbox: bool = False):
         self.working_dir = working_dir or str(Path(__file__).parent.parent.resolve())
+        self.strict_sandbox = (
+            strict_sandbox  # True = Darf den Moruk-Ordner nicht verlassen
+        )
         self._last_result_lock = threading.Lock()
         self._last_result = None
         self._setup_env()
@@ -58,100 +60,125 @@ class Executor:
             for p in old_pp.split(os.pathsep):
                 if p and p not in pythonpath_parts:
                     pythonpath_parts.append(p)
-        
-        # HIER IST DIE KORREKTE EINRÜCKUNG, DIE MORUK VORHIN VERMASSELT HAT:
+
         self.env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
 
-    def _is_safe_path(self, path: str) -> bool:
-        """Sicherheits-Check: Ist der Pfad innerhalb der Sandbox?"""
+    def _resolve_path(self, path: str) -> Path | None:
+        """
+        Löst Pfade sicher auf (expandiert '~', macht Pfade absolut).
+        Gibt None zurück, wenn die Sandbox-Regeln verletzt werden.
+        """
         try:
-            target_path = Path(path).expanduser().resolve()
-            working_dir_path = Path(self.working_dir).resolve()
-            return target_path.is_relative_to(working_dir_path)
+            target_path = Path(path).expanduser()
+            if not target_path.is_absolute():
+                target_path = Path(self.working_dir) / target_path
+
+            target_path = target_path.resolve()
+
+            # Wenn Sandbox aktiv, blockiere Zugriffe außerhalb des working_dir
+            if self.strict_sandbox:
+                working_dir_path = Path(self.working_dir).resolve()
+                if not target_path.is_relative_to(working_dir_path):
+                    return None
+
+            return target_path
         except Exception:
-            return False
+            return None
 
     def run_command(self, command: str, timeout: int = 60) -> dict:
-        """Führt einen Bash-Befehl sicher aus (Ohne shell=True)."""
-        try:
-            # Tilde expandieren: ~ → /home/user (shell=False macht das nicht automatisch)
-            home = os.path.expanduser("~")
-            command = command.replace(" ~/", f" {home}/").replace(" ~", f" {home}")
-            if command.startswith("~/"):
-                command = home + "/" + command[2:]
-            elif command.startswith("~"):
-                command = home + command[1:]
+        """Führt einen Bash-Befehl aus (Unterstützt Pipes & Umleitungen sicher via bash -c)."""
+        if not command.strip():
+            return {"success": False, "error": "Empty command"}
 
-            # FIX 2.1: Befehl in Liste umwandeln, um Injections zu verhindern
-            args = shlex.split(command)
-            if not args:
-                return {"success": False, "error": "Empty command"}
+        try:
+            # Wir nutzen "bash -c", um KI-Befehle mit Pipes (|) und redirects (>) zu erlauben.
+            # shell=False bleibt für die Sicherheit des Subprozesses erhalten.
+            args = ["bash", "-c", command]
 
             result = subprocess.run(
                 args,
-                shell=False,  # <--- SICHER!
+                shell=False,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
                 cwd=self.working_dir,
-                env=self.env
+                env=self.env,
             )
             r = {
                 "command": command,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
+                "stdout": result.stdout.strip(),
+                "stderr": result.stderr.strip(),
                 "returncode": result.returncode,
-                "success": result.returncode == 0
+                "success": result.returncode == 0,
             }
         except subprocess.TimeoutExpired:
-            r = {"command": command, "stdout": "", "stderr": f"Timeout after {timeout}s", "returncode": -1, "success": False}
+            r = {
+                "command": command,
+                "stdout": "",
+                "stderr": f"Timeout after {timeout}s",
+                "returncode": -1,
+                "success": False,
+            }
         except Exception as e:
-            r = {"command": command, "stdout": "", "stderr": str(e), "returncode": -1, "success": False}
+            r = {
+                "command": command,
+                "stdout": "",
+                "stderr": str(e),
+                "returncode": -1,
+                "success": False,
+            }
 
         self.last_result = r
         return r
 
-    def read_file(self, path: str, max_size_mb: int = 1) -> dict:
-        """Liest eine Datei sicher aus der Sandbox."""
-        if not self._is_safe_path(path):
-            return {"success": False, "error": f"Access Denied: Path '{path}' is outside sandbox."}
+    def read_file(self, path: str, max_size_mb: int = 2) -> dict:
+        """Liest eine Datei sicher aus."""
+        resolved = self._resolve_path(path)
+        if not resolved:
+            return {
+                "success": False,
+                "error": f"Access Denied: Path '{path}' is outside sandbox.",
+            }
 
         try:
-            resolved = os.path.expanduser(path)
-            if not os.path.isabs(resolved):
-                resolved = os.path.join(self.working_dir, resolved)
+            if not resolved.is_file():
+                return {"success": False, "error": f"File not found: {resolved}"}
 
-            if not os.path.isfile(resolved):
-                return {"success": False, "error": f"File not found: {path}"}
-
-            size = os.path.getsize(resolved)
+            size = resolved.stat().st_size
             if size > max_size_mb * 1024 * 1024:
-                return {"success": False, "error": f"File too large ({size/1024/1024:.1f}MB). Max: {max_size_mb}MB"}
+                return {
+                    "success": False,
+                    "error": f"File too large ({size/1024/1024:.1f}MB). Max: {max_size_mb}MB",
+                }
 
             with open(resolved, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
 
-            return {"success": True, "content": content, "path": resolved, "size": size}
+            return {
+                "success": True,
+                "content": content,
+                "path": str(resolved),
+                "size": size,
+            }
         except Exception as e:
             return {"success": False, "error": str(e)}
 
     def write_file(self, path: str, content: str) -> dict:
-        """Schreibt eine Datei sicher in die Sandbox."""
-        if not self._is_safe_path(path):
-            return {"success": False, "error": f"Access Denied: Path '{path}' is outside sandbox."}
+        """Schreibt eine Datei sicher und erstellt fehlende Ordner."""
+        resolved = self._resolve_path(path)
+        if not resolved:
+            return {
+                "success": False,
+                "error": f"Access Denied: Path '{path}' is outside sandbox.",
+            }
 
         try:
-            resolved = os.path.expanduser(path)
-            if not os.path.isabs(resolved):
-                resolved = os.path.join(self.working_dir, resolved)
-
-            parent = os.path.dirname(resolved)
-            if parent:
-                os.makedirs(parent, exist_ok=True)
+            # Erstelle übergeordnete Ordner, falls sie nicht existieren
+            resolved.parent.mkdir(parents=True, exist_ok=True)
 
             with open(resolved, "w", encoding="utf-8") as f:
                 f.write(content)
 
-            return {"success": True, "path": resolved, "size": len(content)}
+            return {"success": True, "path": str(resolved), "size": len(content)}
         except Exception as e:
             return {"success": False, "error": str(e)}

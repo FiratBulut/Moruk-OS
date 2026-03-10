@@ -1,0 +1,608 @@
+{
+  "total_input": 4762556,
+  "total_output": 125312,
+  "total_tokens": 5381576,
+  "calls": 957,
+  "sessions": [
+    {
+      "ts": "2026-03-10T19:20:04",
+      "input": 5067,
+      "output": 36,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:07",
+      "input": 5590,
+      "output": 41,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:09",
+      "input": 4992,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:10",
+      "input": 5796,
+      "output": 27,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:14",
+      "input": 5657,
+      "output": 36,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:14",
+      "input": 6275,
+      "output": 34,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:15",
+      "input": 5877,
+      "output": 610,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:18",
+      "input": 5830,
+      "output": 30,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:24",
+      "input": 6453,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:26",
+      "input": 5753,
+      "output": 30,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:28",
+      "input": 5970,
+      "output": 23,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:32",
+      "input": 5931,
+      "output": 32,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:34",
+      "input": 6411,
+      "output": 1100,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:37",
+      "input": 5922,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:20:41",
+      "input": 6420,
+      "output": 37,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:21:01",
+      "input": 3196,
+      "output": 37,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:21:05",
+      "input": 3406,
+      "output": 30,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:21:11",
+      "input": 3991,
+      "output": 51,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:21:15",
+      "input": 4601,
+      "output": 30,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:21:19",
+      "input": 5186,
+      "output": 30,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:21:24",
+      "input": 5718,
+      "output": 35,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:21:27",
+      "input": 6012,
+      "output": 35,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:21:31",
+      "input": 5729,
+      "output": 30,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:21:35",
+      "input": 5763,
+      "output": 30,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:21:39",
+      "input": 5800,
+      "output": 35,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:22:10",
+      "input": 3083,
+      "output": 27,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:22:14",
+      "input": 4227,
+      "output": 34,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:22:17",
+      "input": 4374,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:22:21",
+      "input": 5039,
+      "output": 30,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:22:29",
+      "input": 5714,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:22:34",
+      "input": 6340,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:22:46",
+      "input": 5854,
+      "output": 36,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:22:55",
+      "input": 6124,
+      "output": 32,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:23:02",
+      "input": 5597,
+      "output": 69,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:23:05",
+      "input": 5374,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:23:16",
+      "input": 3157,
+      "output": 27,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:23:21",
+      "input": 4301,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:23:26",
+      "input": 4966,
+      "output": 34,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:23:31",
+      "input": 5113,
+      "output": 30,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:23:39",
+      "input": 5788,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:23:44",
+      "input": 6414,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:23:50",
+      "input": 5931,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:23:54",
+      "input": 5928,
+      "output": 29,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:23:58",
+      "input": 6460,
+      "output": 32,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:24:03",
+      "input": 5921,
+      "output": 31,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:24:35",
+      "input": 3233,
+      "output": 875,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:24:44",
+      "input": 4720,
+      "output": 33,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:24:55",
+      "input": 4906,
+      "output": 431,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:25:42",
+      "input": 3189,
+      "output": 718,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:25:48",
+      "input": 4403,
+      "output": 284,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:26:25",
+      "input": 3339,
+      "output": 38,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:26:28",
+      "input": 3815,
+      "output": 64,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:26:32",
+      "input": 3983,
+      "output": 68,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:27:18",
+      "input": 3296,
+      "output": 43,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:27:21",
+      "input": 3437,
+      "output": 26,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:27:26",
+      "input": 4067,
+      "output": 39,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:27:29",
+      "input": 4263,
+      "output": 32,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:27:34",
+      "input": 4898,
+      "output": 39,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:27:38",
+      "input": 5120,
+      "output": 38,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:27:42",
+      "input": 5378,
+      "output": 39,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:27:46",
+      "input": 4869,
+      "output": 35,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:27:49",
+      "input": 4805,
+      "output": 34,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:27:55",
+      "input": 4486,
+      "output": 51,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:28:23",
+      "input": 3265,
+      "output": 23,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:28:27",
+      "input": 3891,
+      "output": 25,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:28:33",
+      "input": 3979,
+      "output": 122,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:28:37",
+      "input": 4177,
+      "output": 36,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:28:41",
+      "input": 4296,
+      "output": 75,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:29:06",
+      "input": 3229,
+      "output": 44,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:29:10",
+      "input": 3380,
+      "output": 35,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:29:13",
+      "input": 3505,
+      "output": 27,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:29:18",
+      "input": 4135,
+      "output": 35,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:29:21",
+      "input": 4323,
+      "output": 34,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:29:26",
+      "input": 5061,
+      "output": 32,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:29:31",
+      "input": 5554,
+      "output": 33,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:29:37",
+      "input": 6147,
+      "output": 29,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:29:40",
+      "input": 6669,
+      "output": 35,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:29:45",
+      "input": 6608,
+      "output": 35,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:32:21",
+      "input": 1400,
+      "output": 14,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:32:21",
+      "input": 1400,
+      "output": 29,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:32:21",
+      "input": 1400,
+      "output": 29,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:32:49",
+      "input": 3263,
+      "output": 58,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:33:57",
+      "input": 3544,
+      "output": 27,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:04",
+      "input": 4704,
+      "output": 11,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:04",
+      "input": 4704,
+      "output": 35,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:04",
+      "input": 4704,
+      "output": 59,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:04",
+      "input": 4704,
+      "output": 83,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:05",
+      "input": 4704,
+      "output": 98,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:05",
+      "input": 4704,
+      "output": 98,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:10",
+      "input": 4956,
+      "output": 17,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:10",
+      "input": 4956,
+      "output": 27,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:10",
+      "input": 4956,
+      "output": 27,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:14",
+      "input": 5843,
+      "output": 14,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:14",
+      "input": 5843,
+      "output": 39,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:15",
+      "input": 5843,
+      "output": 61,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:34:15",
+      "input": 5843,
+      "output": 61,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:35:40",
+      "input": 4047,
+      "output": 27,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:35:44",
+      "input": 4137,
+      "output": 20,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:35:44",
+      "input": 4137,
+      "output": 36,
+      "model": "gemini-3.1-pro-preview"
+    },
+    {
+      "ts": "2026-03-10T19:35:44",
+      "input": 4137,
+      "output": 36,
+      "model": "gemini-3.1-pro-preview"
+    }
+  ]
+}

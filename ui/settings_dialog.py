@@ -5,9 +5,19 @@ Jeder Slot = Button → Pop-up mit API Key, Base URL, Model Name.
 """
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QGroupBox, QSlider, QMessageBox, QTextEdit,
-    QScrollArea, QWidget, QFrame,
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QGroupBox,
+    QSlider,
+    QMessageBox,
+    QTextEdit,
+    QScrollArea,
+    QWidget,
+    QFrame,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -27,6 +37,7 @@ except ImportError:
 # ═══════════════════════════════════════════════
 # SLOT CONFIG DIALOG (Pop-up für jeden Slot)
 # ═══════════════════════════════════════════════
+
 
 class SlotConfigDialog(QDialog):
     """Pop-up Dialog für einen einzelnen Model-Slot."""
@@ -67,17 +78,22 @@ class SlotConfigDialog(QDialog):
         show_btn = QPushButton("👁")
         show_btn.setFixedWidth(36)
         show_btn.setStyleSheet("background-color: #2a2a4a; padding: 6px;")
-        show_btn.clicked.connect(lambda: self.api_key_input.setEchoMode(
-            QLineEdit.EchoMode.Normal if self.api_key_input.echoMode() == QLineEdit.EchoMode.Password
-            else QLineEdit.EchoMode.Password
-        ))
+        show_btn.clicked.connect(
+            lambda: self.api_key_input.setEchoMode(
+                QLineEdit.EchoMode.Normal
+                if self.api_key_input.echoMode() == QLineEdit.EchoMode.Password
+                else QLineEdit.EchoMode.Password
+            )
+        )
         key_row.addWidget(show_btn)
         layout.addLayout(key_row)
 
         # Base URL
         layout.addWidget(QLabel("Base URL (optional):"))
         self.base_url_input = QLineEdit()
-        self.base_url_input.setPlaceholderText("https://api.openai.com/v1 (leer = Standard)")
+        self.base_url_input.setPlaceholderText(
+            "https://api.openai.com/v1 (leer = Standard)"
+        )
         layout.addWidget(self.base_url_input)
 
         # Model Name
@@ -91,8 +107,11 @@ class SlotConfigDialog(QDialog):
             # Provider Dropdown
             layout.addWidget(QLabel("TTS Provider:"))
             from PyQt6.QtWidgets import QComboBox
+
             self.provider_combo = QComboBox()
-            self.provider_combo.addItems(["auto", "piper", "google", "elevenlabs", "openai"])
+            self.provider_combo.addItems(
+                ["auto", "piper", "google", "elevenlabs", "openai"]
+            )
             self.provider_combo.setToolTip("auto = wird aus Model/Key erkannt")
             layout.addWidget(self.provider_combo)
 
@@ -130,7 +149,9 @@ class SlotConfigDialog(QDialog):
         btn_layout.addWidget(cancel_btn)
 
         save_btn = QPushButton("💾 Save")
-        save_btn.setStyleSheet("background-color: #0f3460; padding: 8px 16px; font-weight: bold;")
+        save_btn.setStyleSheet(
+            "background-color: #0f3460; padding: 8px 16px; font-weight: bold;"
+        )
         save_btn.clicked.connect(self._save)
         btn_layout.addWidget(save_btn)
 
@@ -192,11 +213,10 @@ class SlotConfigDialog(QDialog):
         return self.slot_data
 
 
-
-
 # ═══════════════════════════════════════════════
 # USER PROFILE DIALOG
 # ═══════════════════════════════════════════════
+
 
 class UserProfileDialog(QDialog):
     """Zeigt und bearbeitet was Moruk über den User gelernt hat."""
@@ -209,6 +229,7 @@ class UserProfileDialog(QDialog):
 
         try:
             from core.user_profile import UserProfileEngine
+
             self.engine = UserProfileEngine()
         except Exception as e:
             self.engine = None
@@ -226,7 +247,9 @@ class UserProfileDialog(QDialog):
         header.setStyleSheet("font-size: 18px; font-weight: bold; color: #e94560;")
         layout.addWidget(header)
 
-        sub = QLabel("What Moruk has learned about you — and what you can tell him directly.")
+        sub = QLabel(
+            "What Moruk has learned about you — and what you can tell him directly."
+        )
         sub.setStyleSheet("color: rgba(255,255,255,0.5); font-size: 12px;")
         sub.setWordWrap(True)
         layout.addWidget(sub)
@@ -247,7 +270,9 @@ class UserProfileDialog(QDialog):
             "Write anything: name, job, preferences, language, topics you care about…\n"
             "Example: Ich heiße Firat. Ich spreche Deutsch. Ich arbeite als Software-Entwickler."
         )
-        hint.setStyleSheet("color: rgba(255,255,255,0.45); font-size: 11px; font-style: italic;")
+        hint.setStyleSheet(
+            "color: rgba(255,255,255,0.45); font-size: 11px; font-style: italic;"
+        )
         hint.setWordWrap(True)
         input_layout.addWidget(hint)
 
@@ -358,6 +383,7 @@ class UserProfileDialog(QDialog):
         # Preferences aus user_profile.json lesen
         import json
         from pathlib import Path
+
         profile_path = Path(__file__).parent.parent / "data" / "user_profile.json"
         try:
             with open(profile_path) as f:
@@ -387,9 +413,11 @@ class UserProfileDialog(QDialog):
         lines.append("")
 
         lang = p.get("language", {})
-        lines.append(f"Language: {lang.get('primary','?')}  |  "
-                     f"Style: {lang.get('formality','neutral')}  |  "
-                     f"Length: {lang.get('response_length','medium')}")
+        lines.append(
+            f"Language: {lang.get('primary','?')}  |  "
+            f"Style: {lang.get('formality','neutral')}  |  "
+            f"Length: {lang.get('response_length','medium')}"
+        )
         lines.append("")
 
         domains = p.get("domains", [])
@@ -400,12 +428,14 @@ class UserProfileDialog(QDialog):
         if dist:
             lines.append("")
             lines.append("Task distribution:")
-            for task, count in sorted(dist.items(), key=lambda x: x[1], reverse=True)[:6]:
+            for task, count in sorted(dist.items(), key=lambda x: x[1], reverse=True)[
+                :6
+            ]:
                 bar = "█" * min(count, 20)
                 lines.append(f"  {task:<14} {bar} ({count})")
 
         wf = p.get("workflow", {})
-        wf_active = [k.replace("prefers_","") for k, v in wf.items() if v]
+        wf_active = [k.replace("prefers_", "") for k, v in wf.items() if v]
         if wf_active:
             lines.append("")
             lines.append(f"Workflow:  {', '.join(wf_active)}")
@@ -453,9 +483,11 @@ class UserProfileDialog(QDialog):
 
         # Name erkennen
         import re
+
         name_match = re.search(
             r"(?:ich hei[sße]e|my name is|ich bin)\s+([A-ZÄÖÜa-zäöü]+)",
-            text, re.IGNORECASE
+            text,
+            re.IGNORECASE,
         )
         if name_match:
             name = name_match.group(1).capitalize()
@@ -477,24 +509,30 @@ class UserProfileDialog(QDialog):
         self.engine.save()
         self._load()
 
-        QMessageBox.information(self, "✅ Saved",
-            "Profile updated! Moruk will use this in future conversations.")
+        QMessageBox.information(
+            self,
+            "✅ Saved",
+            "Profile updated! Moruk will use this in future conversations.",
+        )
 
     def _reset_profile(self):
         reply = QMessageBox.question(
-            self, "Reset Profile",
+            self,
+            "Reset Profile",
             "Delete everything Moruk learned about you?\nYour manual notes will also be cleared.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
             try:
                 from pathlib import Path
+
                 p = Path.home() / "moruk-os" / "data" / "user_profile.json"
                 if p.exists():
                     p.unlink()
                 if self.engine:
                     from core.user_profile import UserProfileEngine
+
                     self.engine = UserProfileEngine()
                 self.user_input.clear()
                 self._load()
@@ -505,6 +543,7 @@ class UserProfileDialog(QDialog):
 # ═══════════════════════════════════════════════
 # MAIN SETTINGS DIALOG
 # ═══════════════════════════════════════════════
+
 
 class SettingsDialog(QDialog):
     """Settings Dialog v3 mit 5 Model-Slots."""
@@ -571,7 +610,9 @@ class SettingsDialog(QDialog):
                     border-color: #e94560;
                 }
             """)
-            btn.clicked.connect(lambda checked, k=key, n=display_name, i=icon: self._open_slot(k, n, i))
+            btn.clicked.connect(
+                lambda checked, k=key, n=display_name, i=icon: self._open_slot(k, n, i)
+            )
             row.addWidget(btn, stretch=3)
 
             # Status Label
@@ -646,7 +687,9 @@ class SettingsDialog(QDialog):
         btn_layout.addWidget(cancel_btn)
 
         reset_btn = QPushButton("🗑 Factory Reset")
-        reset_btn.setToolTip("Löscht Memory, Goals, Tasks, Reflection, Sessions — API Keys bleiben")
+        reset_btn.setToolTip(
+            "Löscht Memory, Goals, Tasks, Reflection, Sessions — API Keys bleiben"
+        )
         reset_btn.setStyleSheet("""
             QPushButton {
                 background-color: #2a0a0a;
@@ -700,42 +743,50 @@ class SettingsDialog(QDialog):
         from pathlib import Path
         import shutil
 
-        msg = "\n".join([
-            "FACTORY RESET",
-            "",
-            "Folgendes wird GELOESCHT:",
-            "  - Vector Memory (memory.db)",
-            "  - Conversation History",
-            "  - Short-Term Memory",
-            "  - Goals, Tasks",
-            "  - Reflection Log + Strategy Rules",
-            "  - Self-Profile",
-            "  - Sessions",
-            "  - Codebase Index",
-            "",
-            "Folgendes bleibt ERHALTEN:",
-            "  - API Keys und Settings",
-            "  - Alle .py Dateien",
-            "  - Plugins",
-            "  - Recovery Snapshots",
-            "",
-            "Moruk OS muss danach neu gestartet werden.",
-            "Wirklich fortfahren?",
-        ])
+        msg = "\n".join(
+            [
+                "FACTORY RESET",
+                "",
+                "Folgendes wird GELOESCHT:",
+                "  - Vector Memory (memory.db)",
+                "  - Conversation History",
+                "  - Short-Term Memory",
+                "  - Goals, Tasks",
+                "  - Reflection Log + Strategy Rules",
+                "  - Self-Profile",
+                "  - Sessions",
+                "  - Codebase Index",
+                "",
+                "Folgendes bleibt ERHALTEN:",
+                "  - API Keys und Settings",
+                "  - Alle .py Dateien",
+                "  - Plugins",
+                "  - Recovery Snapshots",
+                "",
+                "Moruk OS muss danach neu gestartet werden.",
+                "Wirklich fortfahren?",
+            ]
+        )
 
-        reply = QMessageBox.warning(self, "Factory Reset",
+        reply = QMessageBox.warning(
+            self,
+            "Factory Reset",
             msg,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No)
+            QMessageBox.StandardButton.No,
+        )
 
         if reply != QMessageBox.StandardButton.Yes:
             return
 
         # Zweite Bestätigung
-        confirm = QMessageBox.question(self, "Sicher?",
+        confirm = QMessageBox.question(
+            self,
+            "Sicher?",
             "Letzter Check: Alle gelernten Daten unwiderruflich löschen?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No)
+            QMessageBox.StandardButton.No,
+        )
 
         if confirm != QMessageBox.StandardButton.Yes:
             return
@@ -779,7 +830,11 @@ class SettingsDialog(QDialog):
             except Exception as e:
                 errors.append(f"sessions/: {e}")
 
-        lines_out = [f"Factory Reset abgeschlossen!", f"", f"Geloescht ({len(deleted)}):"]
+        lines_out = [
+            f"Factory Reset abgeschlossen!",
+            f"",
+            f"Geloescht ({len(deleted)}):",
+        ]
         lines_out += [f"  - {f}" for f in deleted]
         if errors:
             lines_out += ["", "Fehler:"] + [f"  - {e}" for e in errors]
@@ -795,23 +850,27 @@ class SettingsDialog(QDialog):
         if key == "small":
             return {
                 "api_key": self.settings.get("api_key", ""),
-                "base_url": self.settings.get("active_model_config", {}).get("base_url", ""),
+                "base_url": self.settings.get("active_model_config", {}).get(
+                    "base_url", ""
+                ),
                 "model": self.settings.get("model", ""),
             }
         elif key == "voice":
             return {
-                "api_key":     self.settings.get("tts_api_key", "") or self.settings.get("voice_api_key", ""),
-                "base_url":    self.settings.get("voice_base_url", ""),
-                "model":       self.settings.get("tts_model", "") or self.settings.get("voice_model", ""),
+                "api_key": self.settings.get("tts_api_key", "")
+                or self.settings.get("voice_api_key", ""),
+                "base_url": self.settings.get("voice_base_url", ""),
+                "model": self.settings.get("tts_model", "")
+                or self.settings.get("voice_model", ""),
                 "tts_provider": self.settings.get("tts_provider", "auto"),
-                "language":    self.settings.get("tts_language", "de-DE"),
-                "voice_name":  self.settings.get("tts_voice", ""),
+                "language": self.settings.get("tts_language", "de-DE"),
+                "voice_name": self.settings.get("tts_voice", ""),
             }
         elif key == "video":
             return {
                 "api_key": self.settings.get("video_api_key", ""),
                 "base_url": self.settings.get("video_base_url", ""),
-                "model":    self.settings.get("video_model", ""),
+                "model": self.settings.get("video_model", ""),
                 "video_provider": self.settings.get("video_provider", "fal"),
             }
         else:
@@ -859,8 +918,8 @@ class SettingsDialog(QDialog):
             self.settings["providers"][provider]["base_url"] = data.get("base_url", "")
 
         elif key == "voice":
-            api_key  = data.get("api_key", "")
-            model    = data.get("model", "")
+            api_key = data.get("api_key", "")
+            model = data.get("model", "")
             base_url = data.get("base_url", "")
             provider = data.get("tts_provider", "auto")
 
@@ -881,30 +940,30 @@ class SettingsDialog(QDialog):
 
             # tts_* Felder schreiben — das liest voice.py
             self.settings["tts_provider"] = provider
-            self.settings["tts_api_key"]  = api_key
-            self.settings["tts_model"]    = model
+            self.settings["tts_api_key"] = api_key
+            self.settings["tts_model"] = model
             self.settings["tts_language"] = data.get("language", "de-DE")
-            self.settings["tts_voice"]    = data.get("voice_name", "")
+            self.settings["tts_voice"] = data.get("voice_name", "")
             # Auch alte voice_* Felder schreiben für Kompatibilität
-            self.settings["voice_api_key"]  = api_key
+            self.settings["voice_api_key"] = api_key
             self.settings["voice_base_url"] = base_url
-            self.settings["voice_model"]    = model
+            self.settings["voice_model"] = model
 
         elif key == "video":
             api_key = data.get("api_key", "")
-            model   = data.get("model", "")
+            model = data.get("model", "")
             # Auto-detect provider
             provider = data.get("video_provider", "fal")
             if provider == "auto" or not provider:
                 if "veo" in model.lower():
-                    provider = "fal"   # Veo via fal.ai
+                    provider = "fal"  # Veo via fal.ai
                 elif "sora" in model.lower() or api_key.startswith("sk-"):
                     provider = "openai"
                 else:
-                    provider = "fal"   # Default
+                    provider = "fal"  # Default
             self.settings["video_provider"] = provider
-            self.settings["video_api_key"]  = api_key
-            self.settings["video_model"]    = model
+            self.settings["video_api_key"] = api_key
+            self.settings["video_model"] = model
             self.settings["video_base_url"] = data.get("base_url", "")
 
         else:
@@ -951,13 +1010,15 @@ class SettingsDialog(QDialog):
             provider = data.get("tts_provider", "auto") if key == "voice" else None
 
             # Voice: kein Model nötig bei Google/piper
-            voice_ok = (key == "voice" and (
+            voice_ok = key == "voice" and (
                 not has_key  # piper — kein Key nötig
-                or has_key   # API Key reicht für Google/ElevenLabs
-            ))
+                or has_key  # API Key reicht für Google/ElevenLabs
+            )
 
             if (has_key and has_model) or voice_ok:
-                label_txt = data.get("model") or data.get("voice_name") or provider or "piper"
+                label_txt = (
+                    data.get("model") or data.get("voice_name") or provider or "piper"
+                )
                 model_short = label_txt[:25]
                 status_label.setText(f"🟢 {model_short}")
                 status_label.setStyleSheet("color: #4ecca3; font-size: 11px;")
@@ -1000,7 +1061,9 @@ class SettingsDialog(QDialog):
                 if not api_key and provider in ("auto", "piper"):
                     results.append(f"  {icon} {display_name}: ✅ Piper (lokal)")
                 elif api_key:
-                    results.append(f"  {icon} {display_name}: ✅ {provider} — Key gesetzt")
+                    results.append(
+                        f"  {icon} {display_name}: ✅ {provider} — Key gesetzt"
+                    )
                 else:
                     results.append(f"  {icon} {display_name}: ⚫ Nicht konfiguriert")
                 continue
@@ -1014,47 +1077,78 @@ class SettingsDialog(QDialog):
 
             try:
                 # Vision mit Google API Key → nativen Gemini Endpunkt testen
-                if key == "vision" and (api_key.startswith("AIza") or "generativelanguage" in base_url):
+                if key == "vision" and (
+                    api_key.startswith("AIza") or "generativelanguage" in base_url
+                ):
                     import requests as _req
-                    needs_alpha = any(x in model.lower() for x in ["gemini-3-pro-image", "gemini-3.1-flash-image", "gemini-3-flash-image"])
+
+                    needs_alpha = any(
+                        x in model.lower()
+                        for x in [
+                            "gemini-3-pro-image",
+                            "gemini-3.1-flash-image",
+                            "gemini-3-flash-image",
+                        ]
+                    )
                     api_ver = "v1alpha" if needs_alpha else "v1beta"
                     test_url = f"https://generativelanguage.googleapis.com/{api_ver}/models/{model}:generateContent?key={api_key}"
-                    resp = _req.post(test_url, json={
-                        "contents": [{"parts": [{"text": "Hi"}]}]
-                    }, timeout=30)
-                    if resp.status_code in (200, 400):  # 400 kann OK sein (Modell existiert aber kein Image-Prompt)
+                    resp = _req.post(
+                        test_url,
+                        json={"contents": [{"parts": [{"text": "Hi"}]}]},
+                        timeout=30,
+                    )
+                    if resp.status_code in (
+                        200,
+                        400,
+                    ):  # 400 kann OK sein (Modell existiert aber kein Image-Prompt)
                         data = resp.json()
                         # 400 mit INVALID_ARGUMENT = Key ok aber falscher Request → Key ist gültig!
-                        if resp.status_code == 200 or (resp.status_code == 400 and "INVALID_ARGUMENT" in str(data)):
-                            results.append(f"  {icon} {display_name}: ✅ {model} (Gemini API)")
+                        if resp.status_code == 200 or (
+                            resp.status_code == 400 and "INVALID_ARGUMENT" in str(data)
+                        ):
+                            results.append(
+                                f"  {icon} {display_name}: ✅ {model} (Gemini API)"
+                            )
                         else:
                             err = data.get("error", {}).get("message", str(data))[:80]
-                            results.append(f"  {icon} {display_name}: ❌ Error code: {resp.status_code} - {err}")
+                            results.append(
+                                f"  {icon} {display_name}: ❌ Error code: {resp.status_code} - {err}"
+                            )
                     else:
-                        err = resp.json().get("error", {}).get("message", "Unknown")[:80]
-                        results.append(f"  {icon} {display_name}: ❌ Error code: {resp.status_code} - {err}")
+                        err = (
+                            resp.json().get("error", {}).get("message", "Unknown")[:80]
+                        )
+                        results.append(
+                            f"  {icon} {display_name}: ❌ Error code: {resp.status_code} - {err}"
+                        )
 
                 elif api_key.startswith("sk-ant-"):
                     if Anthropic is None:
-                        results.append(f"  {icon} {display_name}: ❌ anthropic package not installed")
+                        results.append(
+                            f"  {icon} {display_name}: ❌ anthropic package not installed"
+                        )
                         continue
                     client = Anthropic(api_key=api_key)
                     client.messages.create(
-                        model=model, max_tokens=10,
-                        messages=[{"role": "user", "content": "Hi"}]
+                        model=model,
+                        max_tokens=10,
+                        messages=[{"role": "user", "content": "Hi"}],
                     )
                     results.append(f"  {icon} {display_name}: ✅ {model}")
                 else:
                     if OpenAI is None:
-                        results.append(f"  {icon} {display_name}: ❌ openai package not installed")
+                        results.append(
+                            f"  {icon} {display_name}: ❌ openai package not installed"
+                        )
                         continue
                     if base_url:
                         client = OpenAI(base_url=base_url, api_key=api_key)
                     else:
                         client = OpenAI(api_key=api_key)
                     client.chat.completions.create(
-                        model=model, max_tokens=10,
-                        messages=[{"role": "user", "content": "Hi"}]
+                        model=model,
+                        max_tokens=10,
+                        messages=[{"role": "user", "content": "Hi"}],
                     )
                     results.append(f"  {icon} {display_name}: ✅ {model}")
 
@@ -1063,11 +1157,16 @@ class SettingsDialog(QDialog):
                 results.append(f"  {icon} {display_name}: ❌ {err}")
 
         if not results:
-            QMessageBox.warning(self, "Test", "Kein Slot konfiguriert.\nKlicke auf einen Slot und gib API Key + Model ein.")
+            QMessageBox.warning(
+                self,
+                "Test",
+                "Kein Slot konfiguriert.\nKlicke auf einen Slot und gib API Key + Model ein.",
+            )
             return
 
-        QMessageBox.information(self, "🧪 Connection Test",
-            "Test Results:\n\n" + "\n".join(results))
+        QMessageBox.information(
+            self, "🧪 Connection Test", "Test Results:\n\n" + "\n".join(results)
+        )
 
     # ── Save ──────────────────────────────────────────────────
 
@@ -1084,10 +1183,13 @@ class SettingsDialog(QDialog):
         # Small Model muss konfiguriert sein
         small_data = self._get_slot_data("small")
         if not small_data.get("api_key") and not small_data.get("model"):
-            reply = QMessageBox.question(self, "Warnung",
+            reply = QMessageBox.question(
+                self,
+                "Warnung",
                 "Small Model ist nicht konfiguriert.\nMoruk kann ohne Model nicht funktionieren.\n\nTrotzdem speichern?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No)
+                QMessageBox.StandardButton.No,
+            )
             if reply == QMessageBox.StandardButton.No:
                 return
 

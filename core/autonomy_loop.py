@@ -22,9 +22,11 @@ class AutonomyLoop(QThread):
     status_signal = pyqtSignal(str)
     tool_start_signal = pyqtSignal(str, str)
     tool_result_signal = pyqtSignal(str, str, bool)
-    project_progress_signal = pyqtSignal(dict)   # NEU: Project progress updates
+    project_progress_signal = pyqtSignal(dict)  # NEU: Project progress updates
 
-    def __init__(self, brain, state_manager, task_manager, reflector, memory, parent=None):
+    def __init__(
+        self, brain, state_manager, task_manager, reflector, memory, parent=None
+    ):
         super().__init__(parent)
         self.brain = brain
         self.state = state_manager
@@ -33,7 +35,7 @@ class AutonomyLoop(QThread):
         self.memory = memory
         self.goal_engine = None
         self.health_monitor = None
-        self.project_manager = None   # NEU: Wird von MainWindow gesetzt
+        self.project_manager = None  # NEU: Wird von MainWindow gesetzt
         self.running = False
         self.paused = True
         self.interval = 20
@@ -45,7 +47,7 @@ class AutonomyLoop(QThread):
         self.max_idle_cycles = 3
 
         # Project Mode State
-        self._project_queue = []      # Queue von Projekt-Prompts
+        self._project_queue = []  # Queue von Projekt-Prompts
         self._project_lock = threading.Lock()
 
         # Event zum sofortigen Aufwecken aus sleep
@@ -53,7 +55,7 @@ class AutonomyLoop(QThread):
 
         # Warmup: Goals aus alter Session nicht sofort aktivieren
         # Erst nach WARMUP_CYCLES Zyklen dürfen auto-Goals laufen
-        self._warmup_cycles = 3   # 3 Zyklen × 20s = ~1 Minute Warmup
+        self._warmup_cycles = 3  # 3 Zyklen × 20s = ~1 Minute Warmup
         self._user_triggered = False  # True wenn User explizit Task/Projekt queued
         self._user_active_until = 0.0  # Timestamp bis wann User als aktiv gilt
 
@@ -71,7 +73,11 @@ class AutonomyLoop(QThread):
                     self._wake_event.clear()
                     continue
 
-            sleep_time = self.idle_interval if self.cycles_without_task >= self.max_idle_cycles else self.interval
+            sleep_time = (
+                self.idle_interval
+                if self.cycles_without_task >= self.max_idle_cycles
+                else self.interval
+            )
             # Kein Sleep wenn noch Tasks oder Projekte warten
             if self.tasks.get_next_task() is not None or self._has_pending_projects():
                 time.sleep(0.1)
@@ -84,6 +90,7 @@ class AutonomyLoop(QThread):
 
         # User gerade aktiv? → Autonomy pausieren
         import time as _time
+
         if _time.time() < self._user_active_until:
             remaining = int(self._user_active_until - _time.time())
             self.status_signal.emit(f"Autonomy: wartet auf User ({remaining}s)")
@@ -114,9 +121,13 @@ class AutonomyLoop(QThread):
         # 2. Goal-generierte Tasks prüfen
         # Warmup: Erst nach N Zyklen oder wenn User explizit was getriggert hat
         if self.goal_engine:
-            in_warmup = self.cycle_count <= self._warmup_cycles and not self._user_triggered
+            in_warmup = (
+                self.cycle_count <= self._warmup_cycles and not self._user_triggered
+            )
             if in_warmup:
-                self.status_signal.emit(f"Autonomy: warming up ({self.cycle_count}/{self._warmup_cycles})...")
+                self.status_signal.emit(
+                    f"Autonomy: warming up ({self.cycle_count}/{self._warmup_cycles})..."
+                )
             else:
                 goal = self.goal_engine.get_next_goal()
                 if goal:
@@ -126,11 +137,17 @@ class AutonomyLoop(QThread):
                     return
 
         # 3. Periodischer Health Check
-        if self.health_monitor and self.cycle_count % self.health_check_interval == 0 and self.cycle_count > 0:
+        if (
+            self.health_monitor
+            and self.cycle_count % self.health_check_interval == 0
+            and self.cycle_count > 0
+        ):
             try:
                 report = self.health_monitor.full_check(auto_repair=True)
                 if report.get("repairs"):
-                    self.thought_signal.emit(f"🔧 Auto-repaired {len(report['repairs'])} system issues")
+                    self.thought_signal.emit(
+                        f"🔧 Auto-repaired {len(report['repairs'])} system issues"
+                    )
                 issues = report.get("issues", 0)
                 if issues > 0 and not report.get("repairs"):
                     self.thought_signal.emit(f"⚠ {issues} system issues need attention")
@@ -155,10 +172,9 @@ class AutonomyLoop(QThread):
     def queue_project(self, user_prompt: str, codebase_context: str = ""):
         """Fügt ein Projekt in die Queue ein. Wird im nächsten Zyklus gestartet."""
         with self._project_lock:
-            self._project_queue.append({
-                "prompt": user_prompt,
-                "context": codebase_context
-            })
+            self._project_queue.append(
+                {"prompt": user_prompt, "context": codebase_context}
+            )
         log.info(f"Project queued: {user_prompt[:80]}")
         self.thought_signal.emit(f"📋 Projekt in Queue: {user_prompt[:60]}...")
         self._user_triggered = True  # User hat explizit was gestartet
@@ -195,33 +211,36 @@ class AutonomyLoop(QThread):
         self.project_manager.on_project_done = self._on_project_done
 
         def on_tool_start(name, params):
-            self.tool_start_signal.emit(name, json.dumps(params, ensure_ascii=False)[:200])
+            self.tool_start_signal.emit(
+                name, json.dumps(params, ensure_ascii=False)[:200]
+            )
 
         def on_tool_result(name, result):
             self.tool_result_signal.emit(
-                name,
-                str(result.get("result", ""))[:500],
-                result.get("success", False)
+                name, str(result.get("result", ""))[:500], result.get("success", False)
             )
 
         # Parent-Task ID für Delete-Check merken
-        parent_task_id = getattr(self.project_manager, '_current_task_id', None)
+        parent_task_id = getattr(self.project_manager, "_current_task_id", None)
 
         try:
             result = self.project_manager.run_project(
-                prompt, context,
+                prompt,
+                context,
                 on_tool_start=on_tool_start,
-                on_tool_result=on_tool_result
+                on_tool_result=on_tool_result,
             )
 
             # Prüfe ob Projekt während Ausführung gelöscht wurde
             if parent_task_id and not self.tasks.get_task_by_id(parent_task_id):
-                log.warning(f"Projekt-Task [{parent_task_id}] wurde gelöscht — Ergebnis verwerfen")
+                log.warning(
+                    f"Projekt-Task [{parent_task_id}] wurde gelöscht — Ergebnis verwerfen"
+                )
                 self.state.set_mode("idle")
                 return
 
             if result.get("success"):
-                self.thought_signal.emit(f"🎉 Projekt erfolgreich abgeschlossen!")
+                self.thought_signal.emit("🎉 Projekt erfolgreich abgeschlossen!")
             else:
                 error = result.get("error", "Unknown")
                 final = result.get("final_review", {})
@@ -236,21 +255,15 @@ class AutonomyLoop(QThread):
 
     def _on_subtask_start(self, index: int, subtask: dict):
         """Callback wenn ein Subtask startet."""
-        self.project_progress_signal.emit(
-            self.project_manager.get_project_status()
-        )
+        self.project_progress_signal.emit(self.project_manager.get_project_status())
 
     def _on_subtask_done(self, index: int, status: str, review: dict):
         """Callback wenn ein Subtask fertig ist."""
-        self.project_progress_signal.emit(
-            self.project_manager.get_project_status()
-        )
+        self.project_progress_signal.emit(self.project_manager.get_project_status())
 
     def _on_project_done(self, final_review: dict):
         """Callback wenn das Projekt fertig ist."""
-        self.project_progress_signal.emit(
-            self.project_manager.get_project_status()
-        )
+        self.project_progress_signal.emit(self.project_manager.get_project_status())
 
     # ── Normal Task Execution ────────────────────────────────
 
@@ -268,8 +281,21 @@ class AutonomyLoop(QThread):
 
         # Codebase-Kontext: relevante Dateien aus Vector-Index laden
         codebase_ctx = ""
-        CODE_KEYWORDS = (".py", "fix", "bug", "implement", "refactor", "add", "update",
-                         "fehler", "funktion", "klasse", "modul", "datei", "code")
+        CODE_KEYWORDS = (
+            ".py",
+            "fix",
+            "bug",
+            "implement",
+            "refactor",
+            "add",
+            "update",
+            "fehler",
+            "funktion",
+            "klasse",
+            "modul",
+            "datei",
+            "code",
+        )
         task_lower = (task["title"] + " " + task.get("description", "")).lower()
         is_code_task = any(kw in task_lower for kw in CODE_KEYWORDS)
         if is_code_task and hasattr(self.memory, "search_codebase"):
@@ -277,7 +303,7 @@ class AutonomyLoop(QThread):
             if hits:
                 codebase_ctx = "RELEVANT CODEBASE FILES:\n"
                 for hit in hits:
-                    snippet = hit['content'][:800]
+                    snippet = hit["content"][:800]
                     codebase_ctx += f"\n--- {snippet} ---\n"
 
         context = f"""AUTONOMOUS MODE - Working on task.
@@ -300,13 +326,13 @@ INSTRUCTIONS:
 """
 
         def on_tool_start(name, params):
-            self.tool_start_signal.emit(name, json.dumps(params, ensure_ascii=False)[:200])
+            self.tool_start_signal.emit(
+                name, json.dumps(params, ensure_ascii=False)[:200]
+            )
 
         def on_tool_result(name, result):
             self.tool_result_signal.emit(
-                name,
-                str(result.get("result", ""))[:500],
-                result.get("success", False)
+                name, str(result.get("result", ""))[:500], result.get("success", False)
             )
 
         try:
@@ -317,13 +343,15 @@ INSTRUCTIONS:
                 on_tool_result=on_tool_result,
                 max_iterations=10,
                 depth=4,
-                isolated=True
+                isolated=True,
             )
 
             # Prüfe ob Task während Ausführung gelöscht wurde
             current = next((t for t in self.tasks.tasks if t["id"] == task_id), None)
             if not current:
-                log.warning(f"Task [{task_id}] wurde während Ausführung gelöscht — Ergebnis verwerfen")
+                log.warning(
+                    f"Task [{task_id}] wurde während Ausführung gelöscht — Ergebnis verwerfen"
+                )
                 self.state.set_mode("idle")
                 return
 
@@ -332,7 +360,9 @@ INSTRUCTIONS:
 
             # Falls Agent task_complete nicht aufgerufen hat → Auto-Complete
             if current.get("status") == "active":
-                log.warning(f"Task [{task_id}] still active after think() — auto-completing")
+                log.warning(
+                    f"Task [{task_id}] still active after think() — auto-completing"
+                )
                 self.tasks.complete_task(task_id)
                 self.thought_signal.emit(f"✅ Task auto-completed: {task['title']}")
         except Exception as e:
@@ -340,7 +370,9 @@ INSTRUCTIONS:
             # Nur fail setzen wenn Task noch existiert
             if any(t["id"] == task_id for t in self.tasks.tasks):
                 self.tasks.fail_task(task_id)
-            self.thought_signal.emit(f"❌ Task failed: {task['title']} — {str(e)[:100]}")
+            self.thought_signal.emit(
+                f"❌ Task failed: {task['title']} — {str(e)[:100]}"
+            )
             self.state.set_mode("idle")
             return
 

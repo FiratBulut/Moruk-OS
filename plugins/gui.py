@@ -3,25 +3,32 @@ PLUGIN_DESCRIPTION = "GUI/Hardware: screenshot, screen_size, mouse_click(x,y), m
 PLUGIN_PARAMS = ["action", "x", "y", "monitor", "text", "key"]
 
 import os
+
 os.environ.setdefault("DISPLAY", ":0")
+
 
 def execute(params):
     action = params.get("action", "screen_size")
 
     # Screenshot
     if action == "screenshot":
-        shot_path = os.path.expanduser("~/moruk-os/gui_screen.png")
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        shot_path = os.path.join(base_dir, "gui_screen.png")
         try:
             import subprocess
+
             result = subprocess.run(
-                ['scrot', shot_path],
-                capture_output=True, text=True, timeout=10
+                ["scrot", shot_path], capture_output=True, text=True, timeout=10
             )
             if result.returncode == 0 and os.path.exists(shot_path):
                 size = os.path.getsize(shot_path) // 1024
-                return {"success": True, "result": f"Screenshot saved: {shot_path} ({size}KB)"}
+                return {
+                    "success": True,
+                    "result": f"Screenshot saved: {shot_path} ({size}KB)",
+                }
             # Fallback: mss
             import mss
+
             with mss.mss() as sct:
                 sct.shot(mon=int(params.get("monitor", 1)), output=shot_path)
             return {"success": True, "result": f"Screenshot (mss): {shot_path}"}
@@ -32,10 +39,13 @@ def execute(params):
     elif action in ("size", "screen_size"):
         try:
             import mss
+
             with mss.mss() as sct:
                 monitors = []
                 for i, m in enumerate(sct.monitors):
-                    monitors.append(f"Monitor {i}: {m['width']}x{m['height']} at ({m['left']},{m['top']})")
+                    monitors.append(
+                        f"Monitor {i}: {m['width']}x{m['height']} at ({m['left']},{m['top']})"
+                    )
                 return {"success": True, "result": "\n".join(monitors)}
         except Exception as e:
             return {"success": False, "result": f"Screen size error: {e}"}
@@ -44,6 +54,7 @@ def execute(params):
     elif action in ("click", "mouse_click"):
         try:
             import pyautogui
+
             x = int(params.get("x", 500))
             y = int(params.get("y", 500))
             pyautogui.click(x, y)
@@ -55,6 +66,7 @@ def execute(params):
     elif action in ("move", "mouse_move"):
         try:
             import pyautogui
+
             x = int(params.get("x", 960))
             y = int(params.get("y", 300))
             pyautogui.moveTo(x, y, duration=0.5)
@@ -66,6 +78,7 @@ def execute(params):
     elif action == "type_text":
         try:
             import pyautogui
+
             text = params.get("text", "")
             if not text:
                 return {"success": False, "result": "No text provided"}
@@ -78,6 +91,7 @@ def execute(params):
     elif action == "key_press":
         try:
             import pyautogui
+
             key = params.get("key", "")
             if not key:
                 return {"success": False, "result": "No key provided"}
@@ -86,4 +100,7 @@ def execute(params):
         except Exception as e:
             return {"success": False, "result": f"Key press failed: {e}"}
 
-    return {"success": False, "result": f"Unknown action: '{action}'. Use: screenshot, screen_size, mouse_click, mouse_move, type_text, key_press"}
+    return {
+        "success": False,
+        "result": f"Unknown action: '{action}'. Use: screenshot, screen_size, mouse_click, mouse_move, type_text, key_press",
+    }

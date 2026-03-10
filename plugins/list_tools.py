@@ -30,7 +30,11 @@ def execute(params: dict) -> dict:
 """
 
     if _plugin_manager is None:
-        return {"success": True, "result": builtin_tools + "\n(Plugin-Liste nicht verfügbar — PluginManager nicht verbunden)"}
+        return {
+            "success": True,
+            "result": builtin_tools
+            + "\n(Plugin-Liste nicht verfügbar — PluginManager nicht verbunden)",
+        }
 
     # Alle Plugins mit PLUGIN_CORE Status auflisten
     lines = ["\nPLUGINS:"]
@@ -39,17 +43,14 @@ def execute(params: dict) -> dict:
         desc = getattr(module, "PLUGIN_DESCRIPTION", "")
         desc = desc.split(".")[0].split("\n")[0][:80]
         tag = "[CORE]" if is_core else "[extra]"
-        
+
         if filter_type == "core" and not is_core:
             continue
         if filter_type == "extra" and is_core:
             continue
-            
+
         lines.append(f"  {tag} {name}: {desc}")
 
     plugin_list = "\n".join(lines)
 
-    return {
-        "success": True,
-        "result": builtin_tools + plugin_list
-    }
+    return {"success": True, "result": builtin_tools + plugin_list}

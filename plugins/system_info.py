@@ -35,14 +35,18 @@ def execute(params: dict) -> dict:
             elif line.startswith("MemAvailable:"):
                 mem_avail = int(line.split()[1]) // 1024
         mem_used = mem_total - mem_avail
-        info.append(f"RAM: {mem_used/1024:.1f} GB used / {mem_total/1024:.1f} GB total ({mem_avail/1024:.1f} GB free)")
+        info.append(
+            f"RAM: {mem_used/1024:.1f} GB used / {mem_total/1024:.1f} GB total ({mem_avail/1024:.1f} GB free)"
+        )
 
         # Disk
         disk = run("df -h / | tail -1")
         if disk:
             parts = disk.split()
             if len(parts) >= 5:
-                info.append(f"Disk: {parts[2]} used / {parts[1]} total ({parts[3]} free, {parts[4]} full)")
+                info.append(
+                    f"Disk: {parts[2]} used / {parts[1]} total ({parts[3]} free, {parts[4]} full)"
+                )
 
         if detail == "full":
             # CPU model
@@ -56,7 +60,9 @@ def execute(params: dict) -> dict:
                 info.append(f"CPU cores: {cores}")
 
             # GPU (exclude integrated Raphael)
-            gpu = run("lspci | grep -i vga | grep -iv 'raphael' | head -1 | cut -d: -f3")
+            gpu = run(
+                "lspci | grep -i vga | grep -iv 'raphael' | head -1 | cut -d: -f3"
+            )
             if gpu:
                 info.append(f"GPU: {gpu.strip()}")
 

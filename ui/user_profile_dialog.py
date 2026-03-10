@@ -2,14 +2,24 @@
 Moruk OS — User Profile Dialog
 Zeigt was Moruk OS über den User weiß: Profil + Preferences aus Memory.
 """
+
 import json
 import os
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QWidget, QGroupBox, QLineEdit, QTextEdit,
-    QFrame, QMessageBox
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QWidget,
+    QGroupBox,
+    QLineEdit,
+    QTextEdit,
+    QFrame,
+    QMessageBox,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -137,7 +147,9 @@ class UserProfileDialog(QDialog):
         pref_layout = QVBoxLayout(pref_group)
 
         if not prefs:
-            empty = QLabel("Noch nichts gespeichert.\nSag z.B.: 'Merke dir: Mein Lieblingsessen ist Pizza'")
+            empty = QLabel(
+                "Noch nichts gespeichert.\nSag z.B.: 'Merke dir: Mein Lieblingsessen ist Pizza'"
+            )
             empty.setStyleSheet("color: #666; font-size: 12px;")
             empty.setWordWrap(True)
             pref_layout.addWidget(empty)
@@ -199,9 +211,12 @@ class UserProfileDialog(QDialog):
             self._refresh()
 
     def _clear_all_prefs(self):
-        reply = QMessageBox.question(self, "Bestätigen",
+        reply = QMessageBox.question(
+            self,
+            "Bestätigen",
             "Alle gemerkten Preferences löschen?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
         if reply == QMessageBox.StandardButton.Yes:
             self.profile["preferences"] = []
             self._save_profile()

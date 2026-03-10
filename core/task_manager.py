@@ -26,7 +26,7 @@ class TaskManager:
 
     def _load_tasks(self) -> list:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
-        
+
         # Versuche Hauptdatei zu laden
         if self.tasks_path.exists():
             try:
@@ -35,8 +35,10 @@ class TaskManager:
                     logger.debug(f"Tasks erfolgreich geladen ({len(data)} Einträge).")
                     return data
             except (json.JSONDecodeError, IOError) as e:
-                logger.error(f"Fehler beim Laden von tasks.json: {e}. Suche nach Backup...")
-        
+                logger.error(
+                    f"Fehler beim Laden von tasks.json: {e}. Suche nach Backup..."
+                )
+
         # Backup-Versuch, falls Hauptdatei Schrott ist
         if self.backup_path.exists():
             try:
@@ -45,24 +47,26 @@ class TaskManager:
                     logger.warning("Backup-Datei geladen, da Hauptdatei korrupt war.")
                     return data
             except Exception as e:
-                logger.critical(f"Backup-Datei ebenfalls korrupt oder nicht lesbar: {e}")
-        
+                logger.critical(
+                    f"Backup-Datei ebenfalls korrupt oder nicht lesbar: {e}"
+                )
+
         return []
 
     def _save_tasks(self):
         """Speichert Tasks atomar und erstellt ein Backup."""
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         tmp_path = self.tasks_path.with_suffix(".tmp")
-        
+
         try:
             # 1. In Temp-Datei schreiben
             with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump(self.tasks, f, indent=2, ensure_ascii=False)
-            
+
             # 2. Backup der alten Version erstellen (falls vorhanden)
             if self.tasks_path.exists():
                 shutil.copy2(self.tasks_path, self.backup_path)
-            
+
             # 3. Temp-Datei zu Hauptdatei umbenennen (atomarer Swap)
             os.replace(tmp_path, self.tasks_path)
             logger.debug("Tasks erfolgreich gespeichert (atomar).")
@@ -71,32 +75,45 @@ class TaskManager:
             if tmp_path.exists():
                 os.remove(tmp_path)
 
-    def add_task(self, title: str, description: str = "", priority: str = "normal", parent_id: str = None) -> dict:
+    def add_task(
+        self,
+        title: str,
+        description: str = "",
+        priority: str = "normal",
+        parent_id: str = None,
+    ) -> dict:
         """Erstellt einen neuen Task."""
         # Duplikat-Check nur für Top-Level Tasks (nicht Subtasks)
         if not parent_id:
             normalized_title = title.strip().lower()
             for existing in self.get_active_tasks():
-                if not existing.get("parent_id") and existing["title"].strip().lower() == normalized_title:
-                    logger.info(f"Task '{title}' existiert bereits. Überspringe Neuanlage.")
+                if (
+                    not existing.get("parent_id")
+                    and existing["title"].strip().lower() == normalized_title
+                ):
+                    logger.info(
+                        f"Task '{title}' existiert bereits. Überspringe Neuanlage."
+                    )
                     return existing
 
         task = {
             "id": str(uuid.uuid4())[:8],
             "title": title,
             "description": description,
-            "status": "pending",       # pending, active, completed, failed
-            "priority": priority,      # low, normal, high, critical
+            "status": "pending",  # pending, active, completed, failed
+            "priority": priority,  # low, normal, high, critical
             "parent_id": parent_id,
             "subtasks": [],
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
-            "completed_at": None
+            "completed_at": None,
         }
         self.tasks.append(task)
         self._save_tasks()
-        logger.info(f"Neuer Task erstellt: [{task['id']}] {title}" +
-                     (f" (parent: {parent_id})" if parent_id else ""))
+        logger.info(
+            f"Neuer Task erstellt: [{task['id']}] {title}"
+            + (f" (parent: {parent_id})" if parent_id else "")
+        )
         return task
 
     def add_subtask_id(self, parent_id: str, subtask_id: str) -> bool:
@@ -107,9 +124,13 @@ class TaskManager:
                     task["subtasks"].append(subtask_id)
                     task["updated_at"] = datetime.now().isoformat()
                     self._save_tasks()
-                    logger.debug(f"Subtask {subtask_id} zu Parent {parent_id} hinzugefügt")
+                    logger.debug(
+                        f"Subtask {subtask_id} zu Parent {parent_id} hinzugefügt"
+                    )
                 return True
-        logger.warning(f"Parent Task [{parent_id}] nicht gefunden für Subtask-Zuordnung.")
+        logger.warning(
+            f"Parent Task [{parent_id}] nicht gefunden für Subtask-Zuordnung."
+        )
         return False
 
     def get_subtasks(self, parent_id: str) -> list:
@@ -148,7 +169,14 @@ class TaskManager:
         subtasks = self.get_subtasks(parent_id)
         total = len(subtasks)
         if total == 0:
-            return {"total": 0, "completed": 0, "failed": 0, "active": 0, "pending": 0, "progress": 0.0}
+            return {
+                "total": 0,
+                "completed": 0,
+                "failed": 0,
+                "active": 0,
+                "pending": 0,
+                "progress": 0.0,
+            }
 
         completed = sum(1 for t in subtasks if t["status"] == "completed")
         failed = sum(1 for t in subtasks if t["status"] == "failed")
@@ -161,7 +189,7 @@ class TaskManager:
             "failed": failed,
             "active": active,
             "pending": pending,
-            "progress": completed / total
+            "progress": completed / total,
         }
 
     def update_status(self, task_id: str, status: str) -> bool:
@@ -174,7 +202,9 @@ class TaskManager:
                 if status == "completed":
                     task["completed_at"] = datetime.now().isoformat()
                 self._save_tasks()
-                logger.info(f"Task [{task_id}] Status geändert: {old_status} -> {status}")
+                logger.info(
+                    f"Task [{task_id}] Status geändert: {old_status} -> {status}"
+                )
                 return True
         logger.warning(f"Update fehlgeschlagen: Task [{task_id}] nicht gefunden.")
         return False
@@ -207,10 +237,10 @@ class TaskManager:
         active = self.get_active_tasks()
         if not active:
             return "No active tasks."
-        
+
         priority_order = {"critical": 0, "high": 1, "normal": 2, "low": 3}
         active.sort(key=lambda t: priority_order.get(t["priority"], 2))
-        
+
         lines = ["Active Tasks:"]
         for t in active[:5]:
             prefix = "  └─" if t.get("parent_id") else "-"
@@ -233,8 +263,10 @@ class TaskManager:
 
         if len(self.tasks) < initial_count:
             self._save_tasks()
-            logger.info(f"Task [{task_id}] gelöscht" +
-                         (f" (inkl. {len(subtask_ids)} Subtasks)" if subtask_ids else ""))
+            logger.info(
+                f"Task [{task_id}] gelöscht"
+                + (f" (inkl. {len(subtask_ids)} Subtasks)" if subtask_ids else "")
+            )
             return True
         return False
 

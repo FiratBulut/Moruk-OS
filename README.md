@@ -19,7 +19,13 @@
 </div>
 
 ---
+## 🚀 What's New in v1.1 (Major Update)
 
+The **Moruk OS v1.1** update transforms the system from a single-threaded agent into a collaborative intelligence ecosystem.
+
+* **🤖 Multi-Agent Orchestration**: Moruk OS can now dynamically spawn specialized sub-agents based on task complexity. One codes, one designs, and one reviews — all in parallel.
+* **🧠 Shared Memory Architecture**: All spawned agents share a real-time memory synchronization layer. They know exactly what their "colleagues" have finished, preventing duplicate work and ensuring 100% alignment.
+* **📂 Dynamic Path Resolution**: Removed all hardcoded `/home/user/` paths. The system is now fully portable and runs anywhere on your Linux machine out of the box.
 ## What is Moruk OS?
 
 Moruk OS is a **fully autonomous AI agent** running locally on your Linux machine. It's not a chatbot — it's an operating system layer that can browse the web, write and execute code, manage files, monitor your system, and complete multi-step projects, all while learning from every interaction.
@@ -220,3 +226,6 @@ Built with obsession by someone who wanted a real AI OS, not just another chatbo
 **Star ⭐ if Moruk OS blew your mind.**
 
 </div>
+
+## System Stability & Rate Limiting
+For detailed information on the rate limiting implementation, bug fixes, and stability test results, please refer to [docs/rate_limiting_audit_report.md](docs/rate_limiting_audit_report.md).

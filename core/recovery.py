@@ -17,10 +17,15 @@ log = get_logger("recovery")
 PROJECT_ROOT = Path(__file__).parent.parent
 SNAPSHOT_DIR = PROJECT_ROOT / "data" / "snapshots"
 
+
 # Kritische Dateien die gesnapshot werden
 def _generate_architecture_md() -> str:
     """Generiert architecture.md automatisch aus dem aktuellen Dateisystem."""
-    lines = ["# Moruk OS — Architecture", f"*Auto-generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*", ""]
+    lines = [
+        "# Moruk OS — Architecture",
+        f"*Auto-generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*",
+        "",
+    ]
 
     for folder in ["core", "ui", "plugins"]:
         d = PROJECT_ROOT / folder
@@ -35,12 +40,13 @@ def _generate_architecture_md() -> str:
                 # PLUGIN_DESCRIPTION
                 for line in text.splitlines():
                     if line.startswith("PLUGIN_DESCRIPTION"):
-                        raw = line.split('=', 1)[-1].strip()
-                        desc = raw.strip('"').strip("'").strip('()').strip()[:80]
+                        raw = line.split("=", 1)[-1].strip()
+                        desc = raw.strip('"').strip("'").strip("()").strip()[:80]
                         break
                 # Modul-Docstring
                 if not desc:
                     import ast as _ast
+
                     try:
                         tree = _ast.parse(text)
                         ds = _ast.get_docstring(tree)
@@ -82,6 +88,7 @@ def _get_critical_files() -> list:
         if (PROJECT_ROOT / cfg).exists():
             files.append(cfg)
     return files
+
 
 # Wird bei jedem Snapshot-Call frisch berechnet — nie veraltet
 CRITICAL_FILES = _get_critical_files()
@@ -168,7 +175,7 @@ class RecoveryManager:
                 "reason": reason,
                 "created_at": datetime.now().isoformat(),
                 "files": files_saved,
-                "file_count": len(files_saved)
+                "file_count": len(files_saved),
             }
 
             self.manifest.append(entry)
@@ -181,7 +188,9 @@ class RecoveryManager:
                     shutil.rmtree(str(old_dir), ignore_errors=True)
 
             self._save_manifest()
-            log.info(f"Snapshot created: {timestamp} ({len(files_saved)} files, reason: {reason})")
+            log.info(
+                f"Snapshot created: {timestamp} ({len(files_saved)} files, reason: {reason})"
+            )
             return entry
 
         except Exception as e:
@@ -194,7 +203,9 @@ class RecoveryManager:
         """Gibt alle verfügbaren Snapshots zurück."""
         return list(reversed(self.manifest))  # Neueste zuerst
 
-    def restore_snapshot(self, snapshot_id: str = None, preserve_learned: bool = True) -> dict:
+    def restore_snapshot(
+        self, snapshot_id: str = None, preserve_learned: bool = True
+    ) -> dict:
         """
         Stellt einen Snapshot wieder her.
         preserve_learned=True: Memories, Self-Profile, Tasks, Settings bleiben erhalten.
@@ -213,7 +224,10 @@ class RecoveryManager:
 
         snap_dir = SNAPSHOT_DIR / entry["id"]
         if not snap_dir.exists():
-            return {"success": False, "error": f"Snapshot directory missing: {snap_dir}"}
+            return {
+                "success": False,
+                "error": f"Snapshot directory missing: {snap_dir}",
+            }
 
         restored = []
         skipped = []
@@ -271,10 +285,12 @@ class RecoveryManager:
             "restored": len(restored),
             "skipped": len(skipped),
             "errors": errors,
-            "message": f"Restored {len(restored)} files, preserved {len(skipped)} learned files"
+            "message": f"Restored {len(restored)} files, preserved {len(skipped)} learned files",
         }
 
-        log.info(f"Recovery: restored {len(restored)} files from {entry['id']}, errors: {len(errors)}")
+        log.info(
+            f"Recovery: restored {len(restored)} files from {entry['id']}, errors: {len(errors)}"
+        )
         return result
 
     def restore_single_file(self, rel_path: str, snapshot_id: str = None) -> dict:
@@ -282,8 +298,11 @@ class RecoveryManager:
         if not self.manifest:
             return {"success": False, "error": "No snapshots"}
 
-        entry = self.manifest[-1] if not snapshot_id else \
-            next((s for s in self.manifest if s["id"] == snapshot_id), None)
+        entry = (
+            self.manifest[-1]
+            if not snapshot_id
+            else next((s for s in self.manifest if s["id"] == snapshot_id), None)
+        )
 
         if not entry:
             return {"success": False, "error": "Snapshot not found"}
@@ -297,7 +316,10 @@ class RecoveryManager:
 
         try:
             shutil.copy2(str(src), str(dst))
-            return {"success": True, "message": f"Restored {rel_path} from {entry['id']}"}
+            return {
+                "success": True,
+                "message": f"Restored {rel_path} from {entry['id']}",
+            }
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -324,5 +346,5 @@ class RecoveryManager:
         return {
             "healthy": len(issues) == 0,
             "checked": len(CRITICAL_FILES),
-            "issues": issues
+            "issues": issues,
         }

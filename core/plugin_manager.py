@@ -1,6 +1,6 @@
 """
 Moruk AI OS - Plugin System
-Auto-Discovery: .py Dateien in ~/moruk-os/plugins/ werden als Tools geladen.
+Auto-Discovery: .py Dateien in plugins/ werden als Tools geladen.
 
 Jedes Plugin muss enthalten:
 - PLUGIN_NAME: str  (Tool-Name)
@@ -12,14 +12,7 @@ Optionale Felder:
 - PLUGIN_VERSION: str
 - PLUGIN_AUTHOR: str
 - def on_load() -> None  (wird beim Laden aufgerufen)
-
-Beispiel Plugin (plugins/hello.py):
-    PLUGIN_NAME = "hello"
-    PLUGIN_DESCRIPTION = "Says hello"
-    PLUGIN_PARAMS = '"name": "string"'
-    def execute(params):
-        name = params.get("name", "World")
-        return {"success": True, "result": f"Hello {name}!"}
+- def on_unload() -> None (wird beim Hot-Reloading vor dem Zerstören aufgerufen)
 """
 
 import sys
@@ -29,7 +22,6 @@ from pathlib import Path
 from core.logger import get_logger
 
 log = get_logger("plugins")
-
 PLUGIN_DIR = Path(__file__).parent.parent / "plugins"
 
 
@@ -39,100 +31,107 @@ class PluginManager:
     def __init__(self):
         self.plugins = {}  # name → module
         self._cached_prompt_docs = None
+
+        # Fügt den Plugin-Ordner zum PYTHONPATH hinzu, damit Plugins
+        # relative/lokale Hilfsdateien importieren können.
+        if str(PLUGIN_DIR) not in sys.path:
+            sys.path.append(str(PLUGIN_DIR))
+
         self.load_all()
 
     def load_all(self):
         """Scannt plugins/ Verzeichnis und lädt alle .py Dateien."""
         PLUGIN_DIR.mkdir(parents=True, exist_ok=True)
-        self.plugins = {}
-        self._cached_prompt_docs = None
+        loaded_count = 0
 
-        for filepath in sorted(PLUGIN_DIR.glob("*.py")):
-            if filepath.name.startswith("_"):
+        for file_path in PLUGIN_DIR.glob("*.py"):
+            # Versteckte Dateien und Init-Dateien überspringen
+            if file_path.name.startswith("_"):
                 continue
+
+            module_name = f"plugins.{file_path.stem}"
+
             try:
-                self._load_plugin(filepath)
+                spec = importlib.util.spec_from_file_location(module_name, file_path)
+                if not spec or not spec.loader:
+                    continue
+
+                module = importlib.util.module_from_spec(spec)
+                # WICHTIG: Sofort in sys.modules registrieren, falls es andere Dinge importiert
+                sys.modules[module_name] = module
+                spec.loader.exec_module(module)
+
+                plugin_name = getattr(module, "PLUGIN_NAME", None)
+                if not plugin_name:
+                    # Kein valides Plugin (z.B. nur eine Helper-Datei) -> ignorieren
+                    sys.modules.pop(module_name, None)
+                    continue
+
+                # Sicherheitscheck: Hat das Plugin eine execute-Methode?
+                if not hasattr(module, "execute"):
+                    log.warning(
+                        f"Plugin '{plugin_name}' abgelehnt: Keine execute() Methode gefunden!"
+                    )
+                    sys.modules.pop(module_name, None)
+                    continue
+
+                # Optionaler Initialisierungs-Hook
+                if hasattr(module, "on_load"):
+                    try:
+                        module.on_load()
+                    except Exception as e:
+                        log.error(f"Error in on_load of plugin '{plugin_name}': {e}")
+
+                self.plugins[plugin_name] = module
+                loaded_count += 1
+
             except Exception as e:
-                log.error(f"Failed to load plugin {filepath.name}: {e}")
+                log.error(f"Failed to load plugin {file_path.name}: {e}")
+                # Aufräumen, falls der Load mittendrin gecrasht ist
+                sys.modules.pop(module_name, None)
 
-        if self.plugins:
-            log.info(f"Loaded {len(self.plugins)} plugins: {list(self.plugins.keys())}")
-
-    def _load_plugin(self, filepath: Path):
-        """Lädt ein einzelnes Plugin."""
-        module_name = f"plugin_{filepath.stem}"
-
-        spec = importlib.util.spec_from_file_location(module_name, filepath)
-        if not spec or not spec.loader:
-            return
-
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-
-        # Pflichtfelder prüfen
-        name = getattr(module, "PLUGIN_NAME", None)
-        if not name:
-            log.warning(f"Plugin {filepath.name}: Missing PLUGIN_NAME, skipping")
-            return
-
-        if not hasattr(module, "execute"):
-            log.warning(f"Plugin {filepath.name}: Missing execute() function, skipping")
-            return
-
-        self.plugins[name] = module
-        log.info(f"Plugin loaded: '{name}' from {filepath.name}")
-
-        # Optional: on_load callback
-        if hasattr(module, "on_load"):
-            try:
-                module.on_load()
-            except Exception as e:
-                log.warning(f"Plugin '{name}' on_load error: {e}")
+        if loaded_count > 0:
+            log.info(f"{loaded_count} Plugins erfolgreich geladen.")
 
     def reload_all(self):
-        """Lädt alle Plugins neu (Hot-Reload)."""
-        old_count = len(self.plugins)
-        self.plugins = {}
+        """Entlädt alle aktiven Plugins sicher und lädt sie neu von der Festplatte."""
+        # 1. Clean Shutdown für aktive Plugins (Ressourcenfreigabe)
+        for name, module in self.plugins.items():
+            if hasattr(module, "on_unload"):
+                try:
+                    module.on_unload()
+                except Exception as e:
+                    log.warning(f"Error in on_unload of plugin '{name}': {e}")
+
+            # 2. FIX: Den WAHREN Python-Modulnamen aus dem Cache löschen!
+            mod_name = getattr(module, "__name__", f"plugins.{name}")
+            sys.modules.pop(mod_name, None)
+
+        self.plugins.clear()
         self._cached_prompt_docs = None
 
-        # Module aus sys.modules entfernen, um frischen Import zu erzwingen
-        for key in list(sys.modules.keys()):
-            if key.startswith("plugin_"):
-                del sys.modules[key]
-
+        # 3. Frischer Neustart
         self.load_all()
-        self._cached_prompt_docs = None
-        log.info(f"Plugins reloaded. {old_count} -> {len(self.plugins)}")
-
-    def execute(self, name: str, params: dict) -> dict:
-        """Führt ein Plugin aus."""
-        if name not in self.plugins:
-            return {"tool": name, "success": False, "result": f"Plugin {name} not found"}
-
-        try:
-            result = self.plugins[name].execute(params)
-            if not isinstance(result, dict) or "success" not in result or "result" not in result:
-                log.warning(f"Plugin {name} returned invalid format. Expected dict with 'success' and 'result'")
-                return {"tool": name, "success": True, "result": str(result)}
-
-            result["tool"] = name
-            return result
-        except Exception as e:
-            return {"tool": name, "success": False, "result": f"Plugin error: {str(e)}"}
+        log.info("Alle Plugins wurden neu geladen (Hot-Reload).")
 
     def has_plugin(self, name: str) -> bool:
         return name in self.plugins
 
-    def get_names(self) -> list:
-        return list(self.plugins.keys())
+    def execute(self, name: str, params: dict) -> dict:
+        """Führt ein Plugin aus. Fängt alle Abstürze im Plugin ab."""
+        if name not in self.plugins:
+            return {"success": False, "result": f"Plugin {name} not found"}
+
+        try:
+            return self.plugins[name].execute(params)
+        except Exception as e:
+            log.error(f"Plugin '{name}' crashed during execution: {e}")
+            return {"success": False, "result": f"Plugin internal error: {e}"}
 
     def get_prompt_docs(self) -> str:
         """
-        Generiert Tool-Dokumentation für den System Prompt.
-        Nur PLUGIN_CORE = True Plugins werden in jeden Prompt injiziert.
-        Nicht-Core Plugins sind via list_tools abrufbar.
-        Cache wird nach reload_all() invalidiert.
+        Generiert die Tool-Dokumentation für den LLM-System-Prompt.
+        Wird nach dem ersten Aufruf gecached.
         """
         if not self.plugins:
             return ""
@@ -140,34 +139,40 @@ class PluginManager:
         if self._cached_prompt_docs is not None:
             return self._cached_prompt_docs
 
-        # Nur PLUGIN_CORE = True Plugins
+        # Finde Core Plugins (oft genutzte Standard-Tools)
         core_plugins = {
-            name: module for name, module in self.plugins.items()
+            name: module
+            for name, module in self.plugins.items()
             if getattr(module, "PLUGIN_CORE", False)
         }
 
+        # Fallback: Wenn niemand Core ist, zeige alle an
         if not core_plugins:
-            # Fallback: alle anzeigen wenn keiner PLUGIN_CORE gesetzt hat
             core_plugins = self.plugins
 
-        non_core = [n for n, m in self.plugins.items() if not getattr(m, "PLUGIN_CORE", False)]
+        non_core = [
+            n for n, m in self.plugins.items() if not getattr(m, "PLUGIN_CORE", False)
+        ]
 
         docs = ["\n--- CORE TOOLS (always available) ---"]
         for name, module in core_plugins.items():
             desc = getattr(module, "PLUGIN_DESCRIPTION", "No description")
-            # Beschreibung auf ersten Satz kürzen
+            # Beschreibung auf den ersten Satz kürzen (Token-Optimierung)
             desc = desc.split(".")[0].split("\n")[0][:100]
             params_doc = getattr(module, "PLUGIN_PARAMS", "")
-            docs.append(f'\n{name}: {desc}')
+
+            docs.append(f"\n{name}: {desc}")
             if params_doc:
-                docs.append(f'  Parameters: {{{params_doc}}}')
+                docs.append(f"  Parameters: {{{params_doc}}}")
 
         if non_core:
-            docs.append(f'\n[{len(non_core)} weitere Tools via list_tools: {", ".join(non_core[:8])}{"..." if len(non_core) > 8 else ""}]')
+            # Zeigt dem LLM, dass es noch mehr Tools gibt (falls 'list_tools' existiert)
+            docs.append(
+                f'\n[{len(non_core)} weitere Tools via list_tools: {", ".join(non_core[:8])}{"..." if len(non_core) > 8 else ""}]'
+            )
 
         self._cached_prompt_docs = "\n".join(docs)
         return self._cached_prompt_docs
 
     def invalidate_cache(self):
-        """Cache invalidieren — nach reload oder neuem Plugin aufrufen."""
         self._cached_prompt_docs = None
